@@ -1,0 +1,1 @@
+    venue = db.StringField()
