@@ -1,6 +1,8 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
-from flask_mongoengine import MongoEngine
+from flask_graphql import GraphQLView
+import graphene
+import mongoengine as db
 from os import environ
 import os
 
@@ -8,6 +10,131 @@ app = Flask(__name__)
 
 CORS(app)
 
-app.config['MONGODB_SETTINGS'] = {
-    'host': os.getenv('MONGO_URI')  # Set this in your .env file
-}
+db.connect(host=os.getenv('MONGO_URI')) # Set this in your .env file
+
+class Ticket(db.Document): # tell flask what are the fields in your database
+    ticketID = db.StringField(primary_key = True)
+    ownerID = db.StringField()
+    eventID = db.StringField()
+    seatNo = db.IntField()
+    seatCategory = db.StringField()
+    price = db.FloatField()
+    status = db.StringField()
+    chargeID = db.StringField()
+    isCheckedIn = db.BooleanField()
+
+    def to_json(self):
+        return {
+            "ticketID": self.ticketID,
+            "ownerID": self.ownerID,
+            "eventID": self.eventID,
+            "seatNo": self.seatNo,
+            "seatCategory": self.seatCategory,
+            "price": self.price,
+            "status": self.status,
+            "chargeID": self.chargeID,
+            "isCheckedIn": self.isCheckedIn
+        }
+
+# Define GraphQL Queries
+class Query(graphene.ObjectType):
+    charge_id = graphene.String(ticketID=graphene.String(required=True))
+    is_checked_in = graphene.Boolean(ticketID=graphene.String(required=True))
+
+    # Query for chargeID
+    def resolve_charge_id(self, info, ticketID):
+        ticket = Ticket.objects(ticketID=ticketID).first()
+        if ticket:
+            return ticket.chargeID
+        return None  # If no ticket found, return None
+
+    # Query for isCheckedIn
+    def resolve_is_checked_in(self, info, ticketID):
+        ticket = Ticket.objects(ticketID=ticketID).first()
+        if ticket:
+            return ticket.isCheckedIn
+        return None  # If no ticket found, return None
+
+# Define the schema
+schema = graphene.Schema(query=Query)
+
+# Add the GraphQL view with the schema
+app.add_url_rule(
+    '/graphql', 
+    view_func=GraphQLView.as_view('graphql', schema=schema, graphiql=True)
+)
+
+@app.route('/ticket/<string:eventID>')
+def get_available_tickets(eventID):
+    '''get tickets with available status'''
+    available_tickets = Ticket.objects(eventID=eventID, status="available")
+
+    if not available_tickets:
+        return jsonify({"code": 404, "message": "No available tickets for this event."}), 404
+
+    # Return the available tickets in the response
+    tickets_data = [ticket.to_json() for ticket in available_tickets]
+
+    return jsonify({"code": 200, "data": tickets_data}), 200
+
+@app.route('/ticket/<string:userID>')
+def get_tickets_by_user(userID):
+    '''get tickets under selected user'''
+    tickets = Ticket.objects(userID=userID)
+
+    if not tickets:
+        return jsonify({"code": 404, "message": "User has no tickets."}), 404
+
+    # Return the available tickets in the response
+    tickets_data = [ticket.to_json() for ticket in tickets]
+
+    return jsonify({"code": 200, "data": tickets_data}), 200
+
+@app.route('/ticket/<string:ticketID>', methods=['PUT'])
+def update_ticket(ticketID):
+    # Find the ticket by ticketID
+    ticket = Ticket.objects(ticketID=ticketID).first()
+
+    if not ticket:
+        return jsonify({"code": 404, "message": "Ticket not found."}), 404
+
+    # Check if the ticket is already checked in
+    if ticket.isCheckedIn:
+        return jsonify({
+            "code": 409,
+            "data": {"ticketID": ticketID},
+            "message": "Ticket is already checked in and cannot be modified."
+        }), 409
+
+    # Get the request data to update
+    data = request.get_json()
+
+    # If the status is being updated, check for conflicts
+    if 'status' in data:
+        if data['status'] == ticket.status:
+            return jsonify({
+                "code": 409,
+                "data": {"ticketID": ticketID},
+                "message": f"Ticket is already {ticket.status}."
+            }), 409
+
+    # Update the ticket with new values from the request
+    ticket.update(**data)
+
+    # Return the updated ticket data
+    updated_ticket = Ticket.objects(ticketID=ticketID).first()
+
+    return jsonify({
+        "code": 200,
+        "data": {
+            "ticketID": updated_ticket.ticketID,
+            "ownerID": updated_ticket.ownerID,
+            "eventID": updated_ticket.eventID,
+            "seatNo": updated_ticket.seatNo,
+            "price": updated_ticket.price,
+            "status": updated_ticket.status
+        }
+    }), 200
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
