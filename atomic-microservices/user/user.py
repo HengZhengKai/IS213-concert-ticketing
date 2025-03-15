@@ -27,3 +27,4 @@ class User(db.Document): # tell flask what are the fields in your database
             "email": self.email,
             "phone": self.phone
         }
+
