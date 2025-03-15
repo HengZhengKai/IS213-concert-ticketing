@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import mongoengine as db
+from datetime import datetime
 from os import environ
 import os
 
@@ -29,3 +30,44 @@ class Transaction(db.Document): # tell flask what are the fields in your databas
             "amount": self.amount,
             "transactionDate": self.transactionDate.isoformat() if self.transactionDate else None
         }
+
+@app.route('/transaction', methods=['POST'])
+def create_transaction():
+    data = request.get_json()
+    required_fields = ["transactionID", "type", "userID", "ticketID", "chargeID", "amount"]
+    
+    if not all(field in data for field in required_fields):
+        return jsonify({"code": 400, "message": "Missing required fields."}), 400
+    
+    if data["type"] not in ["purchase", "refund"]:
+        return jsonify({"code": 400, "message": "Invalid transaction type."}), 400
+    
+    if Transaction.objects(transactionID=data["transactionID"]).first():
+        return jsonify({"code": 409, "message": "Transaction ID already exists."}), 409
+    
+    transaction = Transaction(
+        transactionID=data["transactionID"],
+        type=data["type"],
+        userID=data["userID"],
+        ticketID=data["ticketID"],
+        chargeID=data["chargeID"],
+        amount=data["amount"],
+        transactionDate=datetime.now()
+    )
+    transaction.save()
+    
+    return jsonify({
+        "code": 201,
+        "data": {
+            "transactionID": transaction.transactionID,
+            "type": transaction.type,
+            "userID": transaction.userID,
+            "ticketID": transaction.ticketID,
+            "chargeID": transaction.chargeID,
+            "amount": transaction.amount,
+            "transactionDate": transaction.transactionDate.strftime('%Y-%m-%d %H:%M:%S')
+        }
+    }), 201
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5005, debug=True)
