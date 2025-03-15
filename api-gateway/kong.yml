@@ -1,0 +1,91 @@
+_format_version: "3.0"
+_transform: true
+
+services:
+  - name: event_service
+    url: http://event_service:5001
+    routes:
+      - name: event_service_route
+        paths:
+          - /event
+    strip_path: false
+
+  - name: seat_service
+    url: http://seat_service:5002
+    routes:
+      - name: seat_service_route
+        paths:
+          - /seat
+    strip_path: false          
+
+  - name: waitlist_service
+    url: http://waitlist_service:5003
+    routes:
+      - name: waitlist_service_route
+        paths:
+          - /waitlist
+    strip_path: false
+
+
+  - name: ticket_service
+    url: http://ticket_service:5004
+    routes:
+      - name: ticket_service_route
+        paths:
+          - /ticket
+    strip_path: false
+
+  - name: transaction_service
+    url: http://transaction_service:5005
+    routes:
+      - name: transaction_service_route
+        paths:
+          - /transaction
+    strip_path: false
+  
+  
+  - name: user_service
+    url: http://user_service:5006
+    routes:
+      - name: user_service_route
+        paths:
+          - /user
+    strip_path: false
+
+
+  - name: payment_service
+    url: http://payment_service:8080
+    routes:
+      - name: payment_service_route
+        paths:
+          - /payment
+    strip_path: false
+
+
+plugins:
+  - name: cors
+    config:
+      origins:
+        - "*"
+      methods:
+        - HEAD
+        - GET
+        - POST
+        - PUT
+        - PATCH
+        - DELETE
+        - OPTIONS
+      headers:
+        - Access-Control-Allow-Origin
+        - Accept
+        - Accept-Version
+        - Content-Length
+        - Content-MD5
+        - Content-Type
+        
+  # Justification for local policy over redis/cluster - Backend protection. Accuracy is not as relevant. The requirement is only to protect backend services from overloading that’s caused either by specific users or by attacks.
+  # Stripe Test API limited at 25 / sec
+  - name: rate-limiting
+    config: 
+      second: 25
+      policy: local
