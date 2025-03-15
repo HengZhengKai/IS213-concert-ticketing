@@ -144,10 +144,10 @@ def create_ticket(ticketID):
         # Check if ticket already exists
         if Ticket.objects(ticketID=ticketID).first():
             return jsonify({
-                "code": 400,
+                "code": 409,
                 "data": {"ticketID": ticketID},
                 "message": "Ticket already exists."
-            }), 400
+            }), 409
 
         # Get request data
         data = request.get_json()
