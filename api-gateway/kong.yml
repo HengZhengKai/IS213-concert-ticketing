@@ -54,7 +54,7 @@ services:
 
 
   - name: payment_service
-    url: http://payment_service:8080
+    url: http://payment_service:5007
     routes:
       - name: payment_service_route
         paths:

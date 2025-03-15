@@ -7,3 +7,5 @@ from invokes import invoke_http
 app = Flask(__name__)
 
 CORS(app)
+
+ticket_URL = "http://localhost:5004/ticket"
