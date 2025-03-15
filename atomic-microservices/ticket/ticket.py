@@ -160,7 +160,7 @@ def create_ticket(ticketID):
                 "message": "Missing required fields."
             }), 400
 
-        if not isinstance(data["seatNo"], int)
+        if not isinstance(data["seatNo"], int):
             return jsonify({
                 "code": 400,
                 "message": "Seat number must be an integer."
@@ -184,10 +184,10 @@ def create_ticket(ticketID):
             ownerID=data["ownerID"],
             eventID=data["eventID"],
             seatNo=data["seatNo"],
-            seatCategory=data["seatCategory"]
+            seatCategory=data["seatCategory"],
             price=data["price"],
-            status=data["status"]
-            chargeID=data["chargeID"]
+            status=data["status"],
+            chargeID=data["chargeID"],
             isCheckedIn=data["isCheckedIn"]
         )
         ticket.save()
