@@ -15,7 +15,7 @@ class Event(db.Document): # tell flask what are the fields in your database
     eventName = db.StringField()
     eventDate = db.DateTimeField()
     venue = db.StringField()
-    desc = db.StringField()
+    description = db.StringField()
     totalSeats = db.IntField()
     availableSeats = db.IntField()
 
@@ -25,7 +25,7 @@ class Event(db.Document): # tell flask what are the fields in your database
             "eventName": self.eventName,
             "eventDate": self.eventDate.isoformat() if self.eventDate else None,
             "venue": self.venue,
-            "desc": self.desc,
+            "description": self.description,
             "totalSeats": self.totalSeats,
             "availableSeats": self.availableSeats
         }
