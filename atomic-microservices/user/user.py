@@ -28,3 +28,24 @@ class User(db.Document): # tell flask what are the fields in your database
             "phone": self.phone
         }
 
+@app.route("/user/<string:userID>")
+def get_user(userID):
+    user = User.objects(userID=userID).first()  # MongoEngine query
+
+    if user:
+        return jsonify(
+            {
+                "code": 200,
+                "data": user.to_json()  # Use `to_json()` method of user class
+            }
+        )
+    
+    return jsonify(
+        {
+            "code": 404,
+            "message": "User not found."
+        }
+    ), 404
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5000, debug=True)
