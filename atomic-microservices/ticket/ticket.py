@@ -136,5 +136,75 @@ def update_ticket(ticketID):
         }
     }), 200
 
+
+# POST /ticket/<ticketID> - Create new ticket
+@app.route("/ticket/<string:ticketID>", methods=["POST"])
+def create_ticket(ticketID):
+    try:
+        # Check if ticket already exists
+        if Ticket.objects(ticketID=ticketID).first():
+            return jsonify({
+                "code": 400,
+                "data": {"ticketID": ticketID},
+                "message": "Ticket already exists."
+            }), 400
+
+        # Get request data
+        data = request.get_json()
+
+        # Validate input
+        required_fields = ["ownerID", "eventID", "seatNo", "seatCategory", "price", "status", "chargeID", "isCheckedIn"]
+        if any(field not in data for field in required_fields):
+            return jsonify({
+                "code": 400,
+                "message": "Missing required fields."
+            }), 400
+
+        if not isinstance(data["seatNo"], int)
+            return jsonify({
+                "code": 400,
+                "message": "Seat number must be an integer."
+            }), 400
+    
+        if data["seatNo"] <= 0:
+            return jsonify({
+                "code": 400,
+                "message": "Seat number must be positive."
+            }), 400
+
+        if not isinstance(data["price"], (int, float)) or data["price"] < 0:
+            return jsonify({
+                "code": 400,
+                "message": "Price must be a non-negative number."
+            }), 400
+        
+        # Create and save the new ticket
+        ticket = Ticket(
+            ticketID=ticketID,
+            ownerID=data["ownerID"],
+            eventID=data["eventID"],
+            seatNo=data["seatNo"],
+            seatCategory=data["seatCategory"]
+            price=data["price"],
+            status=data["status"]
+            chargeID=data["chargeID"]
+            isCheckedIn=data["isCheckedIn"]
+        )
+        ticket.save()
+
+        # Return successful response
+        return jsonify({
+            "code": 201,
+            "data": ticket.to_json()
+        }), 201
+
+    except Exception as e:
+        return jsonify({
+            "code": 500,
+            "data": {"ticketID": ticketID},
+            "message": "An error occurred creating the ticket."
+        }), 500
+
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000, debug=True)
