@@ -39,7 +39,7 @@ def get_all_events():
             {
                 "code": 200,
                 "data": {
-                    "book": [event.to_json() for event in eventlist]
+                    "event": [event.to_json() for event in eventlist]
                 }
             }
         )
