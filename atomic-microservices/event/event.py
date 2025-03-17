@@ -29,7 +29,27 @@ class Event(db.Document): # tell flask what are the fields in your database
             "totalSeats": self.totalSeats,
             "availableSeats": self.availableSeats
         }
-    
+
+@app.route("/event")
+def get_all_events():
+    eventlist = Event.objects()
+
+    if len(eventlist):
+        return jsonify(
+            {
+                "code": 200,
+                "data": {
+                    "book": [event.to_json() for event in eventlist]
+                }
+            }
+        )
+    return jsonify(
+        {
+            "code": 404,
+            "message": "There are no events."
+        }
+    ), 404
+
 @app.route("/event/<string:eventID>")
 def get_event(eventID):
     '''return details of selected event'''
