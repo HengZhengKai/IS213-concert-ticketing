@@ -12,6 +12,7 @@ db.connect(host=os.getenv('MONGO_URI')) # Set this in your .env file
 
 class Seat(db.Document): # tell flask what are the fields in your database
     eventID = db.StringField(required = True)
+    eventDateTime = db.DateTimeField(required=True)
     seatNo = db.IntField(required = True)
     category = db.StringField()
     price = db.FloatField()
@@ -27,16 +28,17 @@ class Seat(db.Document): # tell flask what are the fields in your database
     def to_json(self):
         return {
             "eventID": self.eventID,
+            "eventDateTime": self.eventDateTime,
             "seatNo": self.seatNo,
             "category": self.category,
             "price": self.price,
             "status": self.status
         }
 
-@app.route('/event/<string:eventID>/<int:seatNo>', methods=['PUT'])
-def update_seat(eventID, seatNo):
+@app.route('/event/<string:eventID>/<string:eventDateTime>/<int:seatNo>', methods=['PUT'])
+def update_seat(eventID, eventDateTime, seatNo):
     '''update seat status'''
-    seat = Seat.objects(eventID=eventID, seatNo=seatNo).first()
+    seat = Seat.objects(eventID=eventID, eventDateTime=eventDateTime, seatNo=seatNo).first()
 
     # Get the request data (seat status)
     data = request.get_json()
