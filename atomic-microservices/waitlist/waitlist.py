@@ -13,6 +13,7 @@ db.connect(host=os.getenv('MONGO_URI')) # Set this in your .env file
 
 class Waitlist(db.Document): # tell flask what are the fields in your database
     eventID = db.StringField(required = True)
+    eventDateTime = db.DateTimeField(required=True)
     userID = db.StringField(required = True)
     waitlistDate = db.DateTimeField()
 
@@ -26,13 +27,15 @@ class Waitlist(db.Document): # tell flask what are the fields in your database
     def to_json(self):
         return {
             "eventID": self.eventID,
+            "eventDateTime": self.eventDateTime,
             "userID": self.userID,
             "waitlistDate": self.waitlistDate.isoformat() if self.waitlistDate else None
         }
 
-@app.route("/event/<string:eventID>/waitlist")
-def get_waitlist(eventID):
-    event_waitlist = Waitlist.objects(eventID=eventID).only("userID", "waitlistDate")
+@app.route("/event/<string:eventID>/<string:eventDateTime>/waitlist")
+def get_waitlist(eventID, eventDateTime):
+    '''get all users in waitlist'''
+    event_waitlist = Waitlist.objects(eventID=eventID, eventDateTime=eventDateTime).only("userID", "waitlistDate")
     
     if not event_waitlist:
         return jsonify({"code": 404, "message": "No users on waitlist."}), 404
@@ -43,8 +46,8 @@ def get_waitlist(eventID):
         "waitlist": [{"userID": w.userID, "waitlistDate": w.waitlistDate.isoformat()} for w in event_waitlist]
     }), 200
 
-@app.route('/event/<string:eventID>/waitlist', methods=['POST'])
-def add_to_waitlist(eventID):
+@app.route('/event/<string:eventID>/<string:eventDateTime>/waitlist', methods=['POST'])
+def add_to_waitlist(eventID, eventDateTime):
     data = request.get_json()
     if not data or "userID" not in data:
         return jsonify({"code": 400, "message": "Missing userID in request body."}), 400
@@ -52,14 +55,14 @@ def add_to_waitlist(eventID):
     userID = data["userID"]
     
     # Check if user is already on waitlist
-    if Waitlist.objects(eventID=eventID, userID=userID).first():
+    if Waitlist.objects(eventID=eventID, eventDateTime=eventDateTime, userID=userID).first():
         return jsonify({
             "code": 409,
             "data": {"eventID": eventID, "userID": userID},
             "message": "User already in waitlist."
         }), 409
     
-    waitlist = Waitlist(eventID=eventID, userID=userID, waitlistDate=datetime.now())
+    waitlist = Waitlist(eventID=eventID, eventDateTime=eventDateTime, userID=userID, waitlistDate=datetime.now())
     waitlist.save()
     
     return jsonify({
