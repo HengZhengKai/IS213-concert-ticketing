@@ -4,8 +4,10 @@ import mongoengine as db
 from datetime import datetime
 from os import environ
 import os
+from flasgger import Swagger
 
 app = Flask(__name__)
+swagger = Swagger(app)
 
 CORS(app)
 
@@ -49,6 +51,47 @@ class EventDate(db.Document): # tell flask what are the fields in your database
 
 @app.route("/event")
 def get_all_events():
+    """
+    Get all events
+    ---
+    responses:
+      200:
+        description: List of all events
+        schema:
+          type: object
+          properties:
+            code:
+              type: integer
+            data:
+              type: object
+              properties:
+                events:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      eventID:
+                        type: string
+                      eventName:
+                        type: string
+                      venue:
+                        type: string
+                      description:
+                        type: string
+                      totalSeats:
+                        type: integer
+                      dates:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            eventDateTime:
+                              type: string
+                            availableSeats:
+                              type: integer
+      404:
+        description: No events found
+    """
     events = Event.objects()  # Fetch all events
 
     if events:
@@ -84,7 +127,48 @@ def get_all_events():
 
 @app.route("/event/<string:eventID>")
 def select_event(eventID):
-    '''return details of selected event'''
+    """
+    Get details of a specific event
+    ---
+    parameters:
+      - name: eventID
+        in: path
+        type: string
+        required: true
+        description: The ID of the event
+    responses:
+      200:
+        description: Event details
+        schema:
+          type: object
+          properties:
+            code:
+              type: integer
+            data:
+              type: object
+              properties:
+                eventID:
+                  type: string
+                eventName:
+                  type: string
+                venue:
+                  type: string
+                description:
+                  type: string
+                totalSeats:
+                  type: integer
+                dates:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      eventDateTime:
+                        type: string
+                      availableSeats:
+                        type: integer
+      404:
+        description: Event not found
+    """
     event = Event.objects(eventID=eventID).first()
 
     if not event:
@@ -114,7 +198,45 @@ def select_event(eventID):
 
 @app.route("/event/<string:eventID>/<string:eventDateTime>")
 def select_event_date(eventID, eventDateTime):
-    '''get eventDate, shows number of available seats, allows you to book a seat etc'''
+    """
+    Get details of a specific event date
+    ---
+    parameters:
+      - name: eventID
+        in: path
+        type: string
+        required: true
+        description: The ID of the event
+      - name: eventDateTime
+        in: path
+        type: string
+        required: true
+        description: The date and time of the event
+    responses:
+      200:
+        description: Event date details
+        schema:
+          type: object
+          properties:
+            code:
+              type: integer
+            data:
+              type: object
+              properties:
+                event:
+                  type: string
+                  description: Event ID reference
+                eventDateTime:
+                  type: string
+                  description: Event date in ISO format
+                availableSeats:
+                  type: integer
+                  description: Number of available seats
+      400:
+        description: Invalid date format
+      404:
+        description: Event or event date not found
+    """
     # Convert eventDateTime string to datetime object
     try:
         event_date_obj = datetime.fromisoformat(eventDateTime)
@@ -156,8 +278,51 @@ def select_event_date(eventID, eventDateTime):
 
 
 @app.route("/event/<string:eventID>/<string:eventDateTime>", methods = ["PUT"])
-def update_event(eventID):
-    event = Event.objects(eventID=eventID).first()
+def update_event(eventID, eventDateTime):
+    """
+    Update available seats for a specific event date
+    ---
+    parameters:
+      - name: eventID
+        in: path
+        type: string
+        required: true
+        description: The ID of the event
+      - name: eventDateTime
+        in: path
+        type: string
+        required: true
+        description: The date and time of the event
+      - name: body
+        in: body
+        required: true
+        schema:
+          type: object
+          properties:
+            availableSeats:
+              type: integer
+              description: The number of available seats for this event date
+    responses:
+      200:
+        description: Successfully updated available seats
+        schema:
+          type: object
+          properties:
+            code:
+              type: integer
+            data:
+              type: object
+              properties:
+                eventDateTime:
+                  type: string
+                availableSeats:
+                  type: integer
+      400:
+        description: Bad request (Invalid or missing parameters)
+      404:
+        description: Event or event date not found
+    """
+    event = Event.objects(eventID=eventID, eventDateTime=eventDateTime).first()
 
     if not event:
         return jsonify({"code": 404, "message": "Event not found."}), 404
@@ -188,22 +353,22 @@ if __name__ == '__main__':
 
 
 
-# @app.route("/event/<string:eventID>")
-# def get_event(eventID):
-#     '''return details of selected event'''
-#     event = Event.objects(eventID=eventID).first()  # MongoEngine query
+# # @app.route("/event/<string:eventID>")
+# # def get_event(eventID):
+# #     '''return details of selected event'''
+# #     event = Event.objects(eventID=eventID).first()  # MongoEngine query
 
-#     if event:
-#         return jsonify(
-#             {
-#                 "code": 200,
-#                 "data": event.to_json()  # Use `to_json()` method of event class
-#             }
-#         )
+# #     if event:
+# #         return jsonify(
+# #             {
+# #                 "code": 200,
+# #                 "data": event.to_json()  # Use `to_json()` method of event class
+# #             }
+# #         )
     
-#     return jsonify(
-#         {
-#             "code": 404,
-#             "message": "Event not found."
-#         }
-#     ), 404
+# #     return jsonify(
+# #         {
+# #             "code": 404,
+# #             "message": "Event not found."
+# #         }
+# #     ), 404
