@@ -16,11 +16,13 @@ class Ticket(db.Document): # tell flask what are the fields in your database
     ticketID = db.StringField(primary_key = True)
     ownerID = db.StringField()
     eventID = db.StringField()
+    eventDateTime = db.DateTimeField(required=True)
     seatNo = db.IntField()
     seatCategory = db.StringField()
     price = db.FloatField()
+    resalePrice = db.FloatField(null=True) #resalePrice is None when first created
     status = db.StringField()
-    chargeID = db.StringField()
+    chargeID = db.StringField() # can be "" for mock tickets
     isCheckedIn = db.BooleanField()
 
     def to_json(self):
@@ -28,9 +30,11 @@ class Ticket(db.Document): # tell flask what are the fields in your database
             "ticketID": self.ticketID,
             "ownerID": self.ownerID,
             "eventID": self.eventID,
+            "eventDateTime": self.eventDateTime,
             "seatNo": self.seatNo,
             "seatCategory": self.seatCategory,
             "price": self.price,
+            "resalePrice": self.resalePrice,
             "status": self.status,
             "chargeID": self.chargeID,
             "isCheckedIn": self.isCheckedIn
@@ -64,13 +68,13 @@ app.add_url_rule(
     view_func=GraphQLView.as_view('graphql', schema=schema, graphiql=True)
 )
 
-@app.route('/ticket/<string:eventID>')
-def get_available_tickets(eventID):
+@app.route('/ticket/<string:eventID>/<string:eventDateTime>')
+def get_available_tickets(eventID, eventDateTime):
     '''get tickets with available status'''
-    available_tickets = Ticket.objects(eventID=eventID, status="available")
+    available_tickets = Ticket.objects(eventID=eventID, eventDateTime=eventDateTime, status="available")
 
     if not available_tickets:
-        return jsonify({"code": 404, "message": "No available tickets for this event."}), 404
+        return jsonify({"code": 404, "message": "No available tickets for this event on this date."}), 404
 
     # Return the available tickets in the response
     tickets_data = [ticket.to_json() for ticket in available_tickets]
@@ -130,9 +134,14 @@ def update_ticket(ticketID):
             "ticketID": updated_ticket.ticketID,
             "ownerID": updated_ticket.ownerID,
             "eventID": updated_ticket.eventID,
+            "eventDateTime": updated_ticket.eventDateTime,
             "seatNo": updated_ticket.seatNo,
+            "seatCategory": updated_ticket.seatCategory,
             "price": updated_ticket.price,
-            "status": updated_ticket.status
+            "resalePrice": updated_ticket.resalePrice,
+            "status": updated_ticket.status,
+            "chargeID": updated_ticket.chargeID,
+            "isCheckedIn": updated_ticket.isCheckedIn
         }
     }), 200
 
@@ -153,7 +162,7 @@ def create_ticket(ticketID):
         data = request.get_json()
 
         # Validate input
-        required_fields = ["ownerID", "eventID", "seatNo", "seatCategory", "price", "status", "chargeID", "isCheckedIn"]
+        required_fields = ["ownerID", "eventID", "eventDateTime", "seatNo", "seatCategory", "price", "status", "chargeID", "isCheckedIn"]
         if any(field not in data for field in required_fields):
             return jsonify({
                 "code": 400,
@@ -186,6 +195,7 @@ def create_ticket(ticketID):
             seatNo=data["seatNo"],
             seatCategory=data["seatCategory"],
             price=data["price"],
+            resalePrice=data["resalePrice"],
             status=data["status"],
             chargeID=data["chargeID"],
             isCheckedIn=data["isCheckedIn"]
