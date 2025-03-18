@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Ticketing</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+    <script defer src="static/api.js"></script>
+    <script defer src="static/main.js"></script>
+    <link rel="stylesheet" href="static/styles.css">
+</head>
+<body>
+    <div id="home">
+        <h1>Welcome to Event Ticketing</h1>
+        <div v-if="events.length">
+            <h2>Available Events</h2>
+            <ul>
+                <li v-for="event in events" :key="event.id">
+                    {{ event.name }} - <b>{{ event.date }}</b>
+                </li>
+            </ul>
+        </div>
+        <div v-else>
+            <p>Loading events...</p>
+        </div>
+        <a href="buy_ticket.html">Buy Ticket</a> |
+        <a href="resale_ticket.html">Resale Ticket</a> |
+        <a href="check_in.html">Check In</a>
+    </div>
+</body>
+</html>
