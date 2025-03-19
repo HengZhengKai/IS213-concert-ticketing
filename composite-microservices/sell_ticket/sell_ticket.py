@@ -10,6 +10,7 @@ CORS(app)
 
 waitlist_URL = "http://localhost:5003/waitlist"
 ticket_URL = "http://localhost:5004/ticket"
+ticket_microservice_url = "http://localhost:5004/graphql"  # Ticket microservice runs on localhost:5004
 user_URL = "http://localhost:5006/user"
 
 ## can work on this first, no need stripe api implementation yet
@@ -47,6 +48,36 @@ def sell_ticket(ticketID):
     }), 400
 
 def process_sell_ticket(ticket):
-    # Step 2. Update ticket resalePrice and status
+    # Step 2-3. Update ticket resalePrice and status
     print('\n-----Invoking ticket microservice-----')
     ticket_result = invoke_http(f"{ticket_URL}/{ticket.ticketID}", method='PUT', json={"resalePrice": ticket.resalePrice, "status": "available"})
+
+    # Step 4. Query eventID and eventDateTime
+    print('\n-----Querying ticket microservice-----')
+    query = """
+    query {
+        eventDetails(ticketID: $ticketID) {
+            eventID
+            eventDateTime
+        }
+    }
+    """
+    variables = {"ticketID": ticket.ticketID}
+    response = requests.post(ticket_microservice_url, json={'query': query, 'variables': variables})
+    
+    # Extract event details
+    event_data = response.json()
+    
+    if "data" in event_data and event_data["data"]["eventDetails"]:
+        eventID = event_data["data"]["eventDetails"]["eventID"]
+        eventDateTime = event_data["data"]["eventDetails"]["eventDateTime"]
+    else:
+        print("Error: Could not retrieve event details")
+        return {"error": "Event details not found"}
+
+    print(f"Event ID: {eventID}, Event DateTime: {eventDateTime}")
+
+    # Step 5-6. Get waitlist users
+    print('\n-----Invoking waitlist microservice-----')
+    waitlist_users = invoke_http(f"/event/{eventID}/{eventDateTime}/waitlist")
+    
