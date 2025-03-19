@@ -83,6 +83,7 @@ class Query(graphene.ObjectType):
             return ticket.isCheckedIn
         return None  # If no ticket found, return None
 
+    # Query for eventDetails
     def resolve_event_details(self, info, ticketID):
         """Resolves event details (event name and event date) for the given ticketID."""
         ticket = Ticket.objects(ticketID=ticketID).first()
