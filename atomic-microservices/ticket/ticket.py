@@ -41,9 +41,33 @@ class Ticket(db.Document): # tell flask what are the fields in your database
         }
 
 # Define GraphQL Queries
+class EventDetails(graphene.ObjectType):
+    eventID = graphene.String()
+    eventDateTime = graphene.DateTime()
+
 class Query(graphene.ObjectType):
+    """
+    GraphQL Query class to fetch ticket details.
+
+    Available Queries:
+    1. charge_id(ticketID: <string>): Returns the chargeID associated with a given ticket.
+    2. is_checked_in(ticketID: <string>): Returns the check-in status (Boolean) of a given ticket.
+    3. event_details(ticketID: <string>): Returns eventID and eventDateTime of a given ticket
+
+    Example Queries:
+    ```
+    query {
+        chargeId(ticketID: "12345")
+    }
+
+    query {
+        isCheckedIn(ticketID: "12345")
+    }
+    ```
+    """
     charge_id = graphene.String(ticketID=graphene.String(required=True))
     is_checked_in = graphene.Boolean(ticketID=graphene.String(required=True))
+    event_details = graphene.Field(EventDetails, ticketID=graphene.String(required=True))
 
     # Query for chargeID
     def resolve_charge_id(self, info, ticketID):
@@ -59,6 +83,13 @@ class Query(graphene.ObjectType):
             return ticket.isCheckedIn
         return None  # If no ticket found, return None
 
+    def resolve_event_details(self, info, ticketID):
+        """Resolves event details (event name and event date) for the given ticketID."""
+        ticket = Ticket.objects(ticketID=ticketID).first()
+        if ticket:
+            return EventDetails(eventID=ticket.eventID, eventDateTime=ticket.eventDateTime)
+        return None 
+    
 # Define the schema
 schema = graphene.Schema(query=Query)
 
