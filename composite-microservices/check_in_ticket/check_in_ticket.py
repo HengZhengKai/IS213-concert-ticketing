@@ -34,5 +34,6 @@ def is_ticket_checked_in(ticketID):
 def generate_qr(ticketID):
     pass
 
+@app.route("/scanqr/<string:ticketID>", methods=['POST'])
 def on_qr_scanned(ticketID):
     pass
