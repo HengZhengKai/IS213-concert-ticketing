@@ -1,42 +1,60 @@
 async function fetchEvents() {
     console.log("Fetching events...");
     
-    // Return hardcoded events first
-    let hardcodedEvents = [
-        { id: 1, name: "Concert Night", date: "2025-04-10" },
-        { id: 2, name: "Tech Conference", date: "2025-05-20" },
-        { id: 3, name: "Sports Championship", date: "2025-06-15" }
-    ];
-    
     try {
-        let res = await fetch("http://localhost:5001/events");
+        // Note: Using the correct endpoint from your Kong API Gateway
+        let res = await fetch("http://localhost:8000/event");
         let data = await res.json();
         console.log("Received events:", data);
-        return data; // Return actual data from backend
+        
+        if (data.code === 200 && data.data && data.data.events) {
+            // Transform the data to match the format expected by the frontend
+            return data.data.events.map(event => ({
+                id: event.eventID,
+                name: event.eventName,
+                venue: event.venue,
+                description: event.description,
+                date: event.dates && event.dates.length > 0 ? 
+                    new Date(event.dates[0].eventDateTime).toISOString().split('T')[0] : 
+                    'No date available',
+                totalSeats: event.totalSeats,
+                availableSeats: event.dates && event.dates.length > 0 ? 
+                                event.dates[0].availableSeats : 
+                                'Unknown'
+            }));
+        } 
+
+        else {
+            throw new Error("Invalid data format received");
+        }
     } catch (error) {
         console.error("Error fetching events:", error);
-        return hardcodedEvents; // Return hardcoded if API fails
+        // Return hardcoded events as fallback
+        return [
+            { id: "E001", name: "Wrong Event", date: "2025-10-05", venue: "The Arena, Singapore" },
+            { id: "E002", name: "Kpop Stars Live", date: "2025-06-15", venue: "Marina Bay Sands Expo" }
+        ];
     }
 }
 
 
 async function fetchAvailableTickets() {
-    let res = await fetch("http://localhost:5002/tickets");
+    let res = await fetch("http://localhost:8000/ticket");
     return res.json();
 }
 
 async function buyTicketAPI(ticketID) {
-    let res = await fetch(`http://localhost:5002/buyticket/${ticketID}`, { method: "POST" });
+    let res = await fetch(`http://localhost:8000/buyticket/${ticketID}`, { method: "POST" });
     return (await res.json()).message;
 }
 
 async function buyResaleAPI(ticketID) {
-    let res = await fetch(`http://localhost:5002/buyresaleticket/${ticketID}`, { method: "POST" });
+    let res = await fetch(`http://localhost:8000/buyresaleticket/${ticketID}`, { method: "POST" });
     return (await res.json()).message;
 }
 
 async function resellTicketAPI(ticketID, price) {
-    let res = await fetch(`http://localhost:5002/resellticket`, {
+    let res = await fetch(`http://localhost:8000/resellticket`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ticketID, price })
@@ -45,6 +63,6 @@ async function resellTicketAPI(ticketID, price) {
 }
 
 async function checkInAPI(ticketID) {
-    let res = await fetch(`http://localhost:5002/checkin/${ticketID}`, { method: "POST" });
+    let res = await fetch(`http://localhost:8000/checkin/${ticketID}`, { method: "POST" });
     return (await res.json()).message;
 }

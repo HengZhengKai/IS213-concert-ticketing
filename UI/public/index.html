@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -28,4 +28,101 @@
         <a href="check_in.html">Check In</a>
     </div>
 </body>
+</html> -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Ticketing</title>
+    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
+    <script defer src="static/api.js"></script>
+    <script defer src="static/main.js"></script>
+    <link rel="stylesheet" href="static/styles.css">
+    <style>
+        .event-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .event-title {
+            font-size: 1.5rem;
+            margin-bottom: 8px;
+        }
+        .event-detail {
+            margin-bottom: 4px;
+        }
+        .event-venue {
+            color: #555;
+        }
+        .event-date {
+            font-weight: bold;
+            color: #2a6496;
+        }
+        .event-description {
+            margin-top: 8px;
+            color: #666;
+        }
+        .nav-links {
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid #eee;
+        }
+        .nav-links a {
+            display: inline-block;
+            padding: 8px 16px;
+            margin-right: 8px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+        .seats-info {
+            margin-top: 8px;
+            font-size: 0.9rem;
+        }
+        .sold-out {
+            color: #d9534f;
+            font-weight: bold;
+        }
+        .available {
+            color: #5cb85c;
+        }
+    </style>
+</head>
+<body>
+    <div id="home">
+        <h1>Welcome to Event Ticketing</h1>
+        <div v-if="events.length">
+            <h2>Available Events</h2>
+            <div class="event-card" v-for="event in events" :key="event.id">
+                <h3 class="event-title">{{ event.name }}</h3>
+                <p class="event-detail event-venue">Venue: {{ event.venue }}</p>
+                <p class="event-detail event-date">Date: {{ event.date }}</p>
+                <p class="event-description">{{ event.description }}</p>
+                <div class="seats-info">
+                    <span v-if="event.availableSeats === 0" class="sold-out">SOLD OUT</span>
+                    <span v-else class="available">Available Seats: {{ event.availableSeats }}</span>
+                    <span> (Total Capacity: {{ event.totalSeats }})</span>
+                </div>
+            </div>
+        </div>
+        <div v-else class="loading">
+            <p>Loading events...</p>
+        </div>
+        <div class="nav-links">
+            <a href="buy_ticket.html">Buy Ticket</a>
+            <a href="resale_ticket.html">Resale Ticket</a>
+            <a href="check_in.html">Check In</a>
+        </div>
+    </div>
+</body>
 </html>
+

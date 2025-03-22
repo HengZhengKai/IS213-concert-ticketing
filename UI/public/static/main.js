@@ -1,14 +1,24 @@
 const homeApp = Vue.createApp({
     data() {
-        return { events: [] };
+        return { 
+            events: [],
+            loading: true,
+            error: null 
+        };
     },
     async created() {
         console.log("Vue App is created. Fetching events...");
-        this.events = await fetchEvents();
-        console.log("Events fetched:", this.events);
+        try {
+            this.events = await fetchEvents();
+            console.log("Events fetched:", this.events);
+        } catch (error) {
+            console.error("Error in created hook:", error);
+            this.error = "Failed to load events. Please try again later.";
+        } finally {
+            this.loading = false;
+        }
     }
 }).mount("#home");
-
 
 const buyTicketApp = Vue.createApp({
     data() {
