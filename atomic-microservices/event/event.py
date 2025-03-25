@@ -4,8 +4,13 @@ import mongoengine as db
 from datetime import datetime
 from os import environ
 import os
+import urllib.parse
 from flasgger import Swagger
 import logging
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -16,15 +21,19 @@ swagger = Swagger(app)
 
 CORS(app)
 
-# db.connect(host=os.getenv('MONGO_URI')) # Set this in your .env file
-# MongoDB Atlas connection string
-# Format: mongodb+srv://breannong2023:ERyiUfOe90qOnf4Y@ticketing-db.qqamb.mongodb.net/test?retryWrites=true&w=majority
-MONGO_URI = os.getenv('MONGO_URI', 'mongodb://localhost:27017/event_service')
+# MongoDB connection details from environment variables
+username = os.getenv("MONGO_USERNAME")
+password = urllib.parse.quote_plus(os.getenv("MONGO_PASSWORD"))
+cluster = os.getenv("MONGO_CLUSTER")
+database = os.getenv("MONGO_DATABASE")
+
+# Construct connection string
+MONGO_URI = f"mongodb+srv://{username}:{password}@{cluster}/{database}?retryWrites=true&w=majority&authSource=admin"
 
 try:
     # Connect to MongoDB Atlas
-    logger.info(f"Connecting to MongoDB at: {MONGO_URI.split('@')[1] if '@' in MONGO_URI else MONGO_URI}")
-    db.connect(host=MONGO_URI)
+    logger.info(f"Connecting to MongoDB at: {cluster}")
+    db.connect(host=MONGO_URI, alias='default')
     logger.info("Connected to MongoDB successfully")
 except Exception as e:
     logger.error(f"Failed to connect to MongoDB: {e}")
@@ -32,14 +41,18 @@ except Exception as e:
 class Event(db.Document): # tell flask what are the fields in your database
     eventID = db.StringField(primary_key = True)
     eventName = db.StringField(required=True)
+    imageBase64 = db.StringField()
     venue = db.StringField(required=True)
     description = db.StringField()
     totalSeats = db.IntField(required=True)
+
+    meta = {'collection': 'Event'} 
 
     def to_json(self):
         return {
             "eventID": self.eventID,
             "eventName": self.eventName,
+            "imageBase64": self.imageBase64,
             "venue": self.venue,
             "description": self.description,
             "totalSeats": self.totalSeats,
@@ -52,8 +65,9 @@ class EventDate(db.Document): # tell flask what are the fields in your database
     availableSeats = db.IntField()
 
     meta = {
+        'collection': 'EventDate', 
         'indexes': [
-            {'fields': ['event', 'eventDateTime'], 'unique': True}  # Enforce uniqueness
+            {'fields': ['event', 'eventDateTime'], 'unique': True} 
         ]
     }
 
@@ -64,6 +78,7 @@ class EventDate(db.Document): # tell flask what are the fields in your database
             "availableSeats": self.availableSeats
         }
 
+#Route 1
 @app.route("/event")
 def get_all_events():
     """
@@ -89,6 +104,7 @@ def get_all_events():
                 event_info = {
                     "eventID": event.eventID,
                     "eventName": event.eventName,
+                    "imageBase64": event.imageBase64,
                     "venue": event.venue,
                     "description": event.description,
                     "totalSeats": event.totalSeats,
@@ -119,6 +135,7 @@ def get_all_events():
                 "message": "No events found."
             }
         ), 404
+    
     except Exception as e:
         logger.error(f"Error in get_all_events: {e}")
         return jsonify(
@@ -128,6 +145,7 @@ def get_all_events():
             }
         ), 500
 
+#Route 2
 @app.route("/event/<string:eventID>")
 def select_event(eventID):
     """
@@ -166,6 +184,7 @@ def select_event(eventID):
                 "data": {
                     "eventID": event.eventID,
                     "eventName": event.eventName,
+                    "imageBase64": event.imageBase64,
                     "venue": event.venue,
                     "description": event.description,
                     "totalSeats": event.totalSeats,
@@ -360,6 +379,19 @@ def update_event(eventID, eventDateTime):
                 "message": f"Internal server error: {str(e)}"
             }
         ), 500
+    
+# Add this to your Flask app temporarily to debug
+@app.route("/debug")
+def debug_db():
+    try:
+        db_info = {
+            "database": db.connection.get_database().name,
+            "collections": db.connection.get_database().list_collection_names(),
+            "event_count": Event.objects.count()
+        }
+        return jsonify(db_info)
+    except Exception as e:
+        return jsonify({"error": str(e)})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
