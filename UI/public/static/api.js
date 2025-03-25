@@ -3,28 +3,37 @@ async function fetchEvents() {
     
     try {
         // Note: Using the correct endpoint from your Kong API Gateway
-        let res = await fetch("http://localhost:8000/event");
+        let res = await fetch("http://localhost:5001/event");
         let data = await res.json();
         console.log("Received events:", data);
         
         if (data.code === 200 && data.data && data.data.events) {
             // Transform the data to match the format expected by the frontend
-            return data.data.events.map(event => ({
-                id: event.eventID,
-                name: event.eventName,
-                venue: event.venue,
-                description: event.description,
-                date: event.dates && event.dates.length > 0 ? 
-                    new Date(event.dates[0].eventDateTime).toISOString().split('T')[0] : 
-                    'No date available',
-                totalSeats: event.totalSeats,
-                availableSeats: event.dates && event.dates.length > 0 ? 
-                                event.dates[0].availableSeats : 
-                                'Unknown'
-            }));
-        } 
-
-        else {
+            return data.data.events.map(event => {
+                // Check both possible field names
+                const rawImageData = event.imageBase64 || event.displayPicture || '';
+                
+                // Properly format the image data with prefix if needed
+                const imageData = rawImageData.startsWith('data:') ? 
+                                rawImageData : 
+                                rawImageData ? `data:image/png;base64,${rawImageData}` : '';
+                
+                return {
+                    id: event.eventID,
+                    name: event.eventName,
+                    imageBase64: imageData,
+                    venue: event.venue,
+                    description: event.description,
+                    date: event.dates && event.dates.length > 0 ? 
+                        new Date(event.dates[0].eventDateTime).toISOString().split('T')[0] : 
+                        'No date available',
+                    totalSeats: event.totalSeats,
+                    availableSeats: event.dates && event.dates.length > 0 ? 
+                                    event.dates[0].availableSeats : 
+                                    'Unknown'
+                };
+            });
+        } else {
             throw new Error("Invalid data format received");
         }
     } catch (error) {
@@ -39,22 +48,22 @@ async function fetchEvents() {
 
 
 async function fetchAvailableTickets() {
-    let res = await fetch("http://localhost:8000/ticket");
+    let res = await fetch("http://localhost:5001/ticket");
     return res.json();
 }
 
 async function buyTicketAPI(ticketID) {
-    let res = await fetch(`http://localhost:8000/buyticket/${ticketID}`, { method: "POST" });
+    let res = await fetch(`http://localhost:5001/buyticket/${ticketID}`, { method: "POST" });
     return (await res.json()).message;
 }
 
 async function buyResaleAPI(ticketID) {
-    let res = await fetch(`http://localhost:8000/buyresaleticket/${ticketID}`, { method: "POST" });
+    let res = await fetch(`http://localhost:5001/buyresaleticket/${ticketID}`, { method: "POST" });
     return (await res.json()).message;
 }
 
 async function resellTicketAPI(ticketID, price) {
-    let res = await fetch(`http://localhost:8000/resellticket`, {
+    let res = await fetch(`http://localhost:5001/resellticket`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ticketID, price })
@@ -63,6 +72,6 @@ async function resellTicketAPI(ticketID, price) {
 }
 
 async function checkInAPI(ticketID) {
-    let res = await fetch(`http://localhost:8000/checkin/${ticketID}`, { method: "POST" });
+    let res = await fetch(`http://localhost:5001/checkin/${ticketID}`, { method: "POST" });
     return (await res.json()).message;
 }

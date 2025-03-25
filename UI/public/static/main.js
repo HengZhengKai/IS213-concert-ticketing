@@ -3,7 +3,10 @@ const homeApp = Vue.createApp({
         return { 
             events: [],
             loading: true,
-            error: null 
+            error: null,
+            showModal: false,
+            currentImage: '',
+            currentEventName: ''
         };
     },
     async created() {
@@ -16,6 +19,48 @@ const homeApp = Vue.createApp({
             this.error = "Failed to load events. Please try again later.";
         } finally {
             this.loading = false;
+        }
+    },
+    methods: {
+        openImageModal(event) {
+            if (event.imageBase64) {
+                this.currentImage = event.imageBase64;
+                this.currentEventName = event.name;
+                this.showModal = true;
+                
+                // Prevent scrolling on the body when modal is open
+                document.body.style.overflow = 'hidden';
+                
+                // Also close modal when user clicks anywhere outside the image
+                document.addEventListener('click', this.handleOutsideClick);
+                
+                // Allow closing with Escape key
+                document.addEventListener('keydown', this.handleKeyPress);
+            }
+        },
+        closeImageModal() {
+            this.showModal = false;
+            this.currentImage = '';
+            this.currentEventName = '';
+            
+            // Re-enable scrolling
+            document.body.style.overflow = 'auto';
+            
+            // Remove event listeners
+            document.removeEventListener('click', this.handleOutsideClick);
+            document.removeEventListener('keydown', this.handleKeyPress);
+        },
+        handleOutsideClick(e) {
+            // Check if click is on the modal background (not the image)
+            if (e.target.classList.contains('image-modal')) {
+                this.closeImageModal();
+            }
+        },
+        handleKeyPress(e) {
+            // Close modal on Escape key
+            if (e.key === 'Escape') {
+                this.closeImageModal();
+            }
         }
     }
 }).mount("#home");
