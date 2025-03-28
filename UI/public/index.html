@@ -191,7 +191,7 @@
         <h1>Welcome to Event Ticketing</h1>
         <div v-if="events.length">
             <h2>Available Events</h2>
-            <div class="event-card" v-for="event in events" :key="event.id">
+            <div class="event-card" v-for="event in events" :key="event.eventID || event.id">
                 <!-- Image with click event to open modal -->
                 <img v-if="event.imageBase64" 
                     :src="event.imageBase64" 
@@ -202,13 +202,24 @@
                 <div class="event-content">
                     <h3 class="event-title">{{ event.name }}</h3>
                     <p class="event-detail event-venue">Venue: {{ event.venue }}</p>
-                    <p class="event-detail event-date">Date: {{ event.date }}</p>
+                    <!-- <p class="event-detail event-date">Date: {{ event.date }}</p> -->
+                    <!-- Inside your event-content div -->
+                    <div v-if="event.allDates && event.allDates.length > 0" class="event-dates">
+                        <p><strong>All available dates:</strong></p>
+                        <ul>
+                        <li v-for="date in event.allDates" :key="date.dateTime">
+                            {{ date.formatted }} - 
+                            <span v-if="date.availableSeats === 0" class="sold-out">SOLD OUT</span>
+                            <span v-else class="available">{{ date.availableSeats }} seats available</span>
+                        </li>
+                        </ul>
+                    </div>
                     <p class="event-description">{{ event.description }}</p>
-                    <div class="seats-info">
+                    <!-- <div class="seats-info">
                         <span v-if="event.availableSeats === 0" class="sold-out">SOLD OUT</span>
                         <span v-else class="available">Available Seats: {{ event.availableSeats }}</span>
                         <span> (Total Capacity: {{ event.totalSeats }})</span>
-                    </div>
+                    </div> -->
                 </div>
             </div>
         </div>

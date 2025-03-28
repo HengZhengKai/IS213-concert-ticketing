@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import mongoengine as db
 from datetime import datetime
+import pytz
 from os import environ
 import os
 import urllib.parse
@@ -46,37 +47,48 @@ class Event(db.Document): # tell flask what are the fields in your database
     description = db.StringField()
     totalSeats = db.IntField(required=True)
 
-    meta = {'collection': 'Event'} 
+    meta = {'collection': 'Event',
+            'indexes': [
+            {'fields': ['eventID'], 'unique': True}
+        ]
+    } 
 
-    def to_json(self):
-        return {
-            "eventID": self.eventID,
-            "eventName": self.eventName,
-            "imageBase64": self.imageBase64,
-            "venue": self.venue,
-            "description": self.description,
-            "totalSeats": self.totalSeats,
-        }
+    # def to_json(self):
+    #     return {
+    #         "eventID": self.eventID,
+    #         "eventName": self.eventName,
+    #         "imageBase64": self.imageBase64,
+    #         "venue": self.venue,
+    #         "description": self.description,
+    #         "totalSeats": self.totalSeats,
+    #     }
 
 class EventDate(db.Document): # tell flask what are the fields in your database
     # eventID = db.StringField(required=True)  # Links to Event
-    event = db.ReferenceField('Event', required=True, reverse_delete_rule=db.CASCADE)  # Link to Event
+    event = db.ReferenceField('Event', required=True, dbref=True, reverse_delete_rule=db.CASCADE)  # Link to Event
+    eventID = db.StringField()
     eventDateTime = db.DateTimeField(required=True)
     availableSeats = db.IntField()
 
     meta = {
         'collection': 'EventDate', 
         'indexes': [
-            {'fields': ['event', 'eventDateTime'], 'unique': True} 
+            {'fields': ['event', 'eventDateTime'], 'unique': True},
+            {'fields': ['eventID']}
         ]
     }
 
-    def to_json(self):
-        return {
-            "event": self.event.eventID,
-            "eventDateTime": self.eventDateTime.isoformat() if self.eventDateTime else None,
-            "availableSeats": self.availableSeats
-        }
+    # def to_json(self):
+    #     return {
+    #         "event": self.event.eventID,
+    #         "eventDateTime": self.eventDateTime.isoformat() if self.eventDateTime else None,
+    #         "availableSeats": self.availableSeats
+    #     }
+    def save(self, *args, **kwargs):
+        # Ensure eventID is set when saving
+        if self.event and not self.eventID:
+            self.eventID = self.event.eventID
+        super().save(*args, **kwargs)
 
 #Route 1
 @app.route("/event")
@@ -98,7 +110,13 @@ def get_all_events():
             event_data = []
             
             for event in events:
-                event_dates = EventDate.objects(event=event)  # Get dates for each event
+                logger.info(f"Processing Event: {event.eventID}, Name: {event.eventName}")
+
+                #retrieve event dates by matching eventID in event microservice
+                event_dates= EventDate.objects(eventID=event.eventID)
+                
+                # Log the number of dates for this event
+                logger.info(f"Dates by ID for {event.eventID}: {len(event_dates)}")
                 
                 # Process each event
                 event_info = {
@@ -113,10 +131,17 @@ def get_all_events():
                 
                 # Add date information
                 for date in event_dates:
-                    event_info["dates"].append({
-                        "eventDateTime": date.eventDateTime.isoformat() if date.eventDateTime else None,
-                        "availableSeats": date.availableSeats
-                    })
+                    # event_info["dates"].append({
+                    #     "eventDateTime": date.eventDateTime.isoformat() if date.eventDateTime else None,
+                    #     "availableSeats": date.availableSeats or 0
+                    # })
+                    if date.eventDateTime:
+                        sgt_time = date.eventDateTime.replace(tzinfo=pytz.UTC).astimezone(pytz.timezone('Asia/Singapore'))
+                        event_info["dates"].append({
+                            "eventDateTime": sgt_time.isoformat(),
+                            "availableSeats": date.availableSeats or 0,
+                            "formattedDateTime": sgt_time.strftime("%d %B %Y at %I:%M %p SGT")
+                        })
                 
                 event_data.append(event_info)
             
@@ -392,6 +417,62 @@ def debug_db():
         return jsonify(db_info)
     except Exception as e:
         return jsonify({"error": str(e)})
+    
+@app.route("/detailed-diagnostic")
+def detailed_diagnostic():
+    """
+    Comprehensive diagnostic route to investigate event and event date relationships
+    """
+    try:
+        # Collect detailed diagnostic information
+        diagnostic_info = {
+            "total_events": Event.objects().count(),
+            "total_event_dates": EventDate.objects().count(),
+            "events": []
+        }
+
+        # Fetch all events with their dates
+        events = Event.objects()
+        
+        for event in events:
+            # Find all event dates for this event using different methods
+            event_dates_by_ref = EventDate.objects(event=event)
+            event_dates_by_id = EventDate.objects(eventID=event.eventID)
+            
+            event_info = {
+                "event_details": {
+                    "eventID": event.eventID,
+                    "eventName": event.eventName,
+                    "venue": event.venue
+                },
+                "dates_by_reference": [],
+                "dates_by_id": []
+            }
+            
+            # Log dates found by reference
+            for date in event_dates_by_ref:
+                event_info["dates_by_reference"].append({
+                    "datetime": date.eventDateTime.isoformat() if date.eventDateTime else None,
+                    "available_seats": date.availableSeats,
+                    "event_ref_str": str(date.event)
+                })
+            
+            # Log dates found by eventID
+            for date in event_dates_by_id:
+                event_info["dates_by_id"].append({
+                    "datetime": date.eventDateTime.isoformat() if date.eventDateTime else None,
+                    "available_seats": date.availableSeats
+                })
+            
+            diagnostic_info["events"].append(event_info)
+        
+        return jsonify(diagnostic_info)
+    
+    except Exception as e:
+        return jsonify({
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }),
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
