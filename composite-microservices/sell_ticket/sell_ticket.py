@@ -4,6 +4,9 @@ import os, sys
 import requests
 from invokes import invoke_http
 
+import aiohttp
+import asyncio
+
 app = Flask(__name__)
 
 CORS(app)
@@ -81,3 +84,9 @@ def process_sell_ticket(ticket):
     print('\n-----Invoking waitlist microservice-----')
     waitlist_users = invoke_http(f"/event/{eventID}/{eventDateTime}/waitlist")
     
+    if not waitlist_users:
+        print("No users on waitlist.")
+        return {'status': 404, 'message': 'No users on waitlist.'}
+    
+    
+
