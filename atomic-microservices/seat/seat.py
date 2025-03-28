@@ -3,25 +3,55 @@ from flask_cors import CORS
 import mongoengine as db
 from os import environ
 import os
+from datetime import datetime
+import urllib.parse
+from flasgger import Swagger
+import logging
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+swagger = Swagger(app)
 
 CORS(app)
 
-db.connect(host=os.getenv('MONGO_URI')) # Set this in your .env file
+# MongoDB connection details from environment variables
+username = os.getenv("MONGO_USERNAME")
+password = urllib.parse.quote_plus(os.getenv("MONGO_PASSWORD"))
+cluster = os.getenv("MONGO_CLUSTER")
+database = os.getenv("MONGO_DATABASE")
 
-class Seat(db.Document): # tell flask what are the fields in your database
-    eventID = db.StringField(required = True)
-    eventDateTime = db.DateTimeField(required=True)
-    seatNo = db.IntField(required = True)
+# Construct connection string
+MONGO_URI = f"mongodb+srv://{username}:{password}@{cluster}/{database}?retryWrites=true&w=majority&authSource=admin"
+
+try:
+    # Connect to MongoDB Atlas
+    logger.info(f"Connecting to MongoDB at: {cluster}")
+    db.connect(host=MONGO_URI, alias='default')
+    logger.info("Connected to MongoDB successfully")
+except Exception as e:
+    logger.error(f"Failed to connect to MongoDB: {e}")
+
+class Seat(db.Document):
+    eventID = db.StringField(required=True)
+    seatNo = db.IntField(required=True)
     category = db.StringField()
     price = db.FloatField()
     status = db.StringField()
-
-    #ensure eventID, seatNo pair is unique
+    
+    # Make eventDateTime optional or remove it
+    eventDateTime = db.DateTimeField(required=False)
+    
     meta = {
+        'collection': 'Seat',  # Specify exact collection name
         'indexes': [
-            {'fields': ['eventID', 'seatNo'], 'unique': True}  # Enforce uniqueness
+            {'fields': ['eventID', 'seatNo'], 'unique': True}
         ]
     }
 
@@ -67,6 +97,25 @@ def update_seat(eventID, eventDateTime, seatNo):
             "status": data["status"]
         }
     }), 200
+
+#displays the seats in json 
+#can view the json format of data via http://localhost:5002/seats
+@app.route('/seats', methods=['GET'])
+def get_all_seats():
+    try:
+        seats = Seat.objects()
+        return jsonify({
+            "code": 200,
+            "data": {
+                "seats": [seat.to_json() for seat in seats]
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            "code": 500,
+            "message": f"Error retrieving seats: {str(e)}"
+        }), 500
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5002, debug=True)

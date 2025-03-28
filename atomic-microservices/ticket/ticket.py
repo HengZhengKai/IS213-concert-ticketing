@@ -5,12 +5,40 @@ import graphene
 import mongoengine as db
 from os import environ
 import os
+from datetime import datetime
+import urllib.parse
+from flasgger import Swagger
+import logging
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+swagger = Swagger(app)
 
 CORS(app)
 
-db.connect(host=os.getenv('MONGO_URI')) # Set this in your .env file
+# MongoDB connection details from environment variables
+username = os.getenv("MONGO_USERNAME")
+password = urllib.parse.quote_plus(os.getenv("MONGO_PASSWORD"))
+cluster = os.getenv("MONGO_CLUSTER")
+database = os.getenv("MONGO_DATABASE")
+
+# Construct connection string
+MONGO_URI = f"mongodb+srv://{username}:{password}@{cluster}/{database}?retryWrites=true&w=majority&authSource=admin"
+
+try:
+    # Connect to MongoDB Atlas
+    logger.info(f"Connecting to MongoDB at: {cluster}")
+    db.connect(host=MONGO_URI, alias='default')
+    logger.info("Connected to MongoDB successfully")
+except Exception as e:
+    logger.error(f"Failed to connect to MongoDB: {e}")
 
 class Ticket(db.Document): # tell flask what are the fields in your database
     ticketID = db.StringField(primary_key = True)
