@@ -125,7 +125,10 @@
             font-size: 12px;
             border-radius: 4px;
         }
-        
+        .event-description {
+            white-space: pre-wrap;  /* Preserves whitespace and line breaks */
+            word-wrap: break-word;  /* Allows long words to break if needed */
+        }
         /* Image Modal Styles */
         .image-modal {
             display: none;
@@ -214,7 +217,7 @@
                         </li>
                         </ul>
                     </div>
-                    <p class="event-description">{{ event.description }}</p>
+                    <p class="event-description" v-html="event.description"></p>
                     <!-- <div class="seats-info">
                         <span v-if="event.availableSeats === 0" class="sold-out">SOLD OUT</span>
                         <span v-else class="available">Available Seats: {{ event.availableSeats }}</span>
