@@ -88,5 +88,7 @@ def process_sell_ticket(ticket):
         print("No users on waitlist.")
         return {'status': 404, 'message': 'No users on waitlist.'}
     
+    # Step 7: Email waitlist users
+    
     
 
