@@ -79,6 +79,25 @@ def get_user(userID):
         }
     ), 404
 
+@app.route("/user/<string:email>")
+def get_user_by_email(email):
+    user = User.objects(email=email).first()  # MongoEngine query
+
+    if user:
+        return jsonify(
+            {
+                "code": 200,
+                "data": user.to_json()  # Use `to_json()` method of user class
+            }
+        )
+    
+    return jsonify(
+        {
+            "code": 404,
+            "message": "User not found."
+        }
+    ), 404
+
 #displays the seats in json 
 #link to see json http://localhost:5006/users
 @app.route('/users', methods=['GET'])
