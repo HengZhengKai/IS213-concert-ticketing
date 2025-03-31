@@ -1,0 +1,87 @@
+version: '3'
+
+volumes:
+  rabbitmq_data:
+    name: rabbitmq_data
+  mongo-data:
+    name: mongo-data
+
+networks:
+  ticketing-net:
+    driver: bridge
+    name: ticketing-net
+
+services:
+  ####################################
+  # RabbitMQ: The messaging broker   
+  ####################################
+  rabbitmq:
+    image: rabbitmq:3-management
+    hostname: ticketing-rabbit
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes: 
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - ticketing-net
+
+  ####################################
+  # MongoDB: Database for services
+  ####################################
+  mongo:
+    image: mongo:latest
+    hostname: ticketing-mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - ticketing-net
+
+  ####################################
+  # Email Atomic Microservice
+  ####################################
+  email_service:
+    build:
+      context: ../email
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "5005:5005"
+    environment:
+      - SMTP_SERVER=${SMTP_SERVER:-smtp.gmail.com}
+      - SMTP_PORT=${SMTP_PORT:-587}
+      - EMAIL_USERNAME=${EMAIL_USERNAME}
+      - EMAIL_PASSWORD=${EMAIL_PASSWORD}
+      - SENDER_EMAIL=${SENDER_EMAIL}
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+      - USER_SERVICE_URL=http://user_service:5006
+    depends_on:
+      - rabbitmq
+      - user_service
+    networks:
+      - ticketing-net
+
+  ####################################
+  # User Atomic Microservice 
+  ####################################
+  user_service:
+    build:
+      context: ../../user
+      dockerfile: Dockerfile
+    restart: always
+    ports:
+      - "5006:5006"
+    environment:
+      - MONGO_USERNAME=breannong2023
+      - MONGO_PASSWORD=7rgWH1qw3rgneVNZ
+      - MONGO_CLUSTER=ticketing-db.qqamb.mongodb.net
+      - MONGO_DATABASE=ticket-booking
+    depends_on:
+      - mongo
+    networks:
+      - ticketing-net
