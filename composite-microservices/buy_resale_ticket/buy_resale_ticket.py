@@ -48,8 +48,6 @@ def process_buy_resale_ticket(ticketID):
 
 # Execute this program if it is run as a main script (not by 'import')
 if __name__ == "__main__":
-    print("This is flask " + os.path.basename(__file__) +
-          " for placing an order...")
     app.run(host="0.0.0.0", port=5101, debug=True)
     # Notes for the parameters:
     # - debug=True will reload the program automatically if a change is detected;
