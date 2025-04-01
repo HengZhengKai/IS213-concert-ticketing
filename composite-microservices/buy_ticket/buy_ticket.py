@@ -15,8 +15,9 @@ transaction_URL = "http://localhost:5005/transaction"
 user_URL = "http://localhost:5006/user"
 payment_URL = "http://localhost:5007/payment"
 
-@app.route("/buyticket/<string:ticketID>", methods=['POST'])
-def buy_ticket(ticketID):
+#app route: http://localhost:5100/buyticket
+@app.route("/buyticket", methods=['POST'])
+def buy_ticket(eventID, eventDate, seatNo):
     pass
 
 if __name__ == "__main__":
