@@ -4,3 +4,4 @@ Flask-GraphQL==2.0.0
 mongoengine==0.29.1
 graphene==2.1.8
 graphql-core==2.2.1
+python-dotenv==1.0.0
