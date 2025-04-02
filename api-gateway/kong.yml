@@ -8,6 +8,8 @@ services:
       - name: event_service_route
         paths:
           - /event
+          - /event/:eventID
+          - /event/:eventID/:eventDateTime
     strip_path: false
 
   - name: seat_service
@@ -15,7 +17,7 @@ services:
     routes:
       - name: seat_service_route
         paths:
-          - /seat
+          - /seats
     strip_path: false          
 
   - name: waitlist_service
@@ -23,16 +25,17 @@ services:
     routes:
       - name: waitlist_service_route
         paths:
-          - /waitlist
+          - /waitlist/:eventID/:eventDateTime
     strip_path: false
-
 
   - name: ticket_service
     url: http://ticket_service:5004
     routes:
       - name: ticket_service_route
         paths:
-          - /ticket
+          - /ticket/:ticketID
+          - /ticket/:userID
+          - /ticket/:eventID/:eventDateTime
     strip_path: false
 
   - name: transaction_service
@@ -43,13 +46,13 @@ services:
           - /transaction
     strip_path: false
   
-  
   - name: user_service
     url: http://user_service:5006
     routes:
       - name: user_service_route
         paths:
-          - /user
+          - /user:userID
+          - /user:email
     strip_path: false
 
 
@@ -61,6 +64,46 @@ services:
           - /payment
     strip_path: false
 
+  - name: email_service
+    url: http://email_service:5008
+    routes:
+      - name: payment_service_route
+        paths:
+          - /payment
+    strip_path: false
+
+  - name: buy_ticket_service
+    url: http://buy_ticket_service:5100
+    routes:
+      - name: buy_ticket_service_route
+        paths:
+          - /buyticket
+    strip_path: false
+
+  - name: sell_ticket_service
+    url: http://sell_ticket_service:5101
+    routes:
+      - name: sell_ticket_service_route
+        paths:
+          - /sellticket
+    strip_path: false
+
+  - name: buy_resale_ticket_service
+    url: http://buy_resale_ticket_service:5102
+    routes:
+      - name: buy_resale_ticket_service_route
+        paths:
+          - /buyresaleticket
+    strip_path: false
+
+  - name: check_in_service
+    url: http://check_in_ticket_service:5103
+    routes:
+      - name: check_in_ticket_service_route
+        paths:
+          - /generateqr/:ticketID
+          - /scanqr/:ticketID
+    strip_path: false
 
 plugins:
   - name: cors
