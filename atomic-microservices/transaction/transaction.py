@@ -59,6 +59,7 @@ class Transaction(db.Document): # tell flask what are the fields in your databas
             "transactionDate": self.transactionDate.isoformat() if self.transactionDate else None
         }
 
+# Route 1
 @app.route('/transaction', methods=['POST'])
 def create_transaction():
     data = request.get_json()
