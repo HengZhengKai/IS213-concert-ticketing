@@ -65,23 +65,27 @@ class Seat(db.Document):
             "status": self.status
         }
 
-@app.route('/event/<string:eventID>/<string:eventDateTime>/<int:seatNo>', methods=['PUT'])
-def update_seat(eventID, eventDateTime, seatNo):
-    '''update seat status'''
-    seat = Seat.objects(eventID=eventID, eventDateTime=eventDateTime, seatNo=seatNo).first()
-
-    # Get the request data (seat status)
+#Route 1
+@app.route('/seats', methods=['PUT'])
+def update_seat():
+    '''Update seat status'''
+    # Get the request data (seat status and other necessary details)
     data = request.get_json()
 
-    # Check if the status field is in the request
-    if 'status' not in data:
-        return jsonify({"code": 400, "message": "Status field is required."}), 400
+    # Check if all necessary fields are present
+    if 'eventID' not in data or 'eventDateTime' not in data or 'seatNo' not in data:
+        return jsonify({"code": 400, "message": "eventID, eventDateTime and seatNo are required."}), 400
     
+    if 'status' not in data:
+        return jsonify({"code": 400, "message": "Missing status."}), 400
+
+    seat = Seat.objects(eventID=data['eventID'], eventDateTime=data['eventDateTime'], seatNo=data['seatNo']).first()
+
     # Check if the seat is already booked
     if data["status"] == seat.status:
         return jsonify({
             "code": 409,
-            "data": {"eventID": eventID, "seatNo": seatNo},
+            "data": {"eventID": data['eventID'], "seatNo": data['seatNo']},
             "message": f"Seat already {seat.status}."
         }), 409
     
@@ -92,8 +96,8 @@ def update_seat(eventID, eventDateTime, seatNo):
     return jsonify({
         "code": 200,
         "data": {
-            "eventID": eventID,
-            "seatNo": seatNo,
+            "eventID": data['eventID'],
+            "seatNo": data['seatNo'],
             "status": data["status"]
         }
     }), 200
