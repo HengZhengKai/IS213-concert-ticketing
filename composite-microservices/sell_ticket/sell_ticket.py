@@ -13,20 +13,17 @@ CORS(app)
 
 waitlist_URL = "http://localhost:5003/waitlist"
 ticket_URL = "http://localhost:5004/ticket"
-ticket_microservice_url = "http://localhost:5004/graphql"  # Ticket microservice runs on localhost:5004
+ticket_microservice_url = "http://localhost:5004/graphql"
 user_URL = "http://localhost:5006/user"
 
-## can work on this first, no need stripe api implementation yet
 @app.route("/sellticket/<string:ticketID>", methods=['POST']) # json body: resalePrice
 def sell_ticket(ticketID):
     if request.is_json:
         try:
             ticket = request.get_json()
-            ticket["ticketID"] = ticketID
-            # so now ticket looks like {tickekID: T001, resalePrice: 80}
+            ticket["ticketID"] = ticketID # ticket looks like {ticketID: T001, resalePrice: 80}
             print("\nReceived a ticket in JSON:", ticket)
 
-            # do the actual work
             # 1. Put ticket up for sale
             result = process_sell_ticket(ticket)
             return jsonify(result), result["code"]
@@ -55,6 +52,25 @@ def process_sell_ticket(ticket):
     print('\n-----Invoking ticket microservice-----')
     ticket_result = invoke_http(f"{ticket_URL}/{ticket.ticketID}", method='PUT', json={"resalePrice": ticket.resalePrice, "status": "available"})
 
+    # Check the ticket result; if a failure, do error handling.
+    code = ticket_result["code"]
+    if code not in range(200, 300):
+        pass
+        # # Inform the error microservice
+        # print('\n\n-----Invoking error microservice as order fails-----')
+        # invoke_http(error_URL, method="POST", json=ticket_result)
+        # # - reply from the invocation is not used; 
+        # # continue even if this invocation fails
+        # print("Order status ({:d}) sent to the error microservice:".format(
+        #     code), order_result)
+
+        return {
+            "code": 500,
+            "data": {"ticket_result": ticket_result},
+            "message": "Ticket update failure, sent for error handling."
+        }
+
+
     # Step 4. Query eventID and eventDateTime
     print('\n-----Querying ticket microservice-----')
     query = """
@@ -68,7 +84,7 @@ def process_sell_ticket(ticket):
     variables = {"ticketID": ticket.ticketID}
     response = requests.post(ticket_microservice_url, json={'query': query, 'variables': variables})
     
-    # Extract event details
+    # Step 5: Process event details
     event_data = response.json()
     
     if "data" in event_data and event_data["data"]["eventDetails"]:
@@ -80,15 +96,15 @@ def process_sell_ticket(ticket):
 
     print(f"Event ID: {eventID}, Event DateTime: {eventDateTime}")
 
-    # Step 5-6. Get waitlist users
+    # Step 6-7. Get waitlist users
     print('\n-----Invoking waitlist microservice-----')
-    waitlist_users = invoke_http(f"/event/{eventID}/{eventDateTime}/waitlist")
+    waitlist_users = invoke_http(f"{waitlist_URL}//waitlist/{eventID}/{eventDateTime}")
     
     if not waitlist_users:
         print("No users on waitlist.")
         return {'status': 404, 'message': 'No users on waitlist.'}
     
-    # Step 7: Email waitlist users
+    # Step 8: Email waitlist users
     
     
 
