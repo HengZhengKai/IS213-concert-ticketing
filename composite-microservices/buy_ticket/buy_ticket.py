@@ -17,8 +17,13 @@ payment_URL = "http://localhost:5007/payment"
 
 #app route: http://localhost:5100/buyticket
 @app.route("/buyticket", methods=['POST'])
-def buy_ticket(eventID, eventDate, seatNo):
-    pass
+def buy_ticket():
+    data = request.get_json()
+    required_fields = ["eventID", "eventDate", "seatNo"]
+    
+    if not all(field in data for field in required_fields):
+        return jsonify({"code": 400, "message": "Missing required fields."}), 400
+    
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5100, debug=True)
