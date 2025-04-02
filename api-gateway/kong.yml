@@ -67,9 +67,9 @@ services:
   - name: email_service
     url: http://email_service:5008
     routes:
-      - name: payment_service_route
+      - name: email_service_route
         paths:
-          - /payment
+          - /email
     strip_path: false
 
   - name: buy_ticket_service
