@@ -6,7 +6,6 @@ import pytz
 from os import environ
 import os
 import urllib.parse
-from flasgger import Swagger
 import logging
 from dotenv import load_dotenv
 
@@ -18,7 +17,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-swagger = Swagger(app)
 
 CORS(app)
 
@@ -53,15 +51,15 @@ class Event(db.Document): # tell flask what are the fields in your database
         ]
     } 
 
-    # def to_json(self):
-    #     return {
-    #         "eventID": self.eventID,
-    #         "eventName": self.eventName,
-    #         "imageBase64": self.imageBase64,
-    #         "venue": self.venue,
-    #         "description": self.description,
-    #         "totalSeats": self.totalSeats,
-    #     }
+    def to_json(self):
+        return {
+            "eventID": self.eventID,
+            "eventName": self.eventName,
+            "imageBase64": self.imageBase64,
+            "venue": self.venue,
+            "description": self.description,
+            "totalSeats": self.totalSeats,
+        }
 
 class EventDate(db.Document): # tell flask what are the fields in your database
     # eventID = db.StringField(required=True)  # Links to Event
@@ -78,12 +76,13 @@ class EventDate(db.Document): # tell flask what are the fields in your database
         ]
     }
 
-    # def to_json(self):
-    #     return {
-    #         "event": self.event.eventID,
-    #         "eventDateTime": self.eventDateTime.isoformat() if self.eventDateTime else None,
-    #         "availableSeats": self.availableSeats
-    #     }
+    def to_json(self):
+        return {
+            "event": self.event.eventID,
+            "eventDateTime": self.eventDateTime.isoformat() if self.eventDateTime else None,
+            "availableSeats": self.availableSeats
+        }
+
     def save(self, *args, **kwargs):
         # Ensure eventID is set when saving
         if self.event and not self.eventID:
@@ -227,7 +226,7 @@ def select_event(eventID):
             }
         ), 500
 
-
+#Route 3
 @app.route("/event/<string:eventID>/<string:eventDateTime>")
 def select_event_date(eventID, eventDateTime):
     """
@@ -299,6 +298,7 @@ def select_event_date(eventID, eventDateTime):
             }
         ), 500
 
+#Route 4
 @app.route("/event/<string:eventID>/<string:eventDateTime>", methods = ["PUT"])
 def update_event(eventID, eventDateTime):
     """
