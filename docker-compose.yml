@@ -1,0 +1,223 @@
+volumes:
+  rabbitmq_data:
+
+services:
+  ##################################
+  #? kong: API Gateway
+  ##################################
+  kong:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    image: kong:latest
+    container_name: kong
+    restart: always
+    environment:
+      KONG_DATABASE: "off"
+      KONG_DECLARATIVE_CONFIG: kong.yml
+    ports:
+      - "8000:8000"
+      - "8443:8443" 
+      - "8001:8001"
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+
+
+  ##################################
+  #? event_service: The Event microservice
+  ##################################
+
+  event_service:
+    build: ./atomic-microservices/event/
+    container_name: event_service
+    ports:
+      - "5001:5001"
+    env_file:
+      - ./atomic-microservices/event/.env
+
+  ##################################
+  #? seat_service: The Seat microservice
+  ##################################
+
+  seat_service:
+    build: ./atomic-microservices/seat/
+    container_name: seat_service
+    ports:
+      - "5002:5002"
+    env_file:
+      - ./atomic-microservices/seat/.env
+
+  ##################################
+  #? waitlist_service: The Waitlist microservice
+  ##################################
+
+  waitlist_service:
+    build: ./atomic-microservices/waitlist/
+    container_name: waitlist_service
+    ports:
+      - "5003:5003"
+    env_file:
+      - ./atomic-microservices/waitlist/.env
+
+  ##################################
+  #? ticket_service: The Ticket microservice
+  ##################################
+
+  ticket_service:
+    build: ./atomic-microservices/ticket/
+    container_name: ticket_service
+    ports:
+      - "5004:5004"
+    env_file:
+      - ./atomic-microservices/ticket/.env
+
+  ##################################
+  #? transaction_service: The Transaction microservice
+  ##################################
+
+  transaction_service:
+    build: ./atomic-microservices/transaction/
+    container_name: transaction_service
+    ports:
+      - "5005:5005"
+    env_file:
+      - ./atomic-microservices/transaction/.env
+
+  ##################################
+  #? user_service: The User microservice
+  ##################################
+
+  user_service:
+    build: ./atomic-microservices/user/
+    container_name: user_service
+    ports:
+      - "5006:5006"
+    env_file:
+      - ./atomic-microservices/user/.env
+
+  ##################################
+  #? payment_service: The Payment microservice
+  ##################################
+
+  payment_service:
+    build: ./atomic-microservices/payment/
+    container_name: payment_service
+    ports:
+      - "5007:5007"
+    env_file:
+      - ./atomic-microservices/payment/.env
+
+  ##################################
+  #? email_service: The Email microservice
+  ##################################
+
+  email_service:
+    build: ./atomic-microservices/email/
+    container_name: email_service
+    ports:
+      - "5008:5008"
+    env_file:
+      - ./atomic-microservices/payment/.env
+    depends_on:
+      - rabbitmq
+
+  ##################################
+  #? buy_ticket: The Buy Ticket microservice
+  ##################################
+
+  buy_ticket_service:
+    build: ./composite-microservices/buy_ticket/
+    container_name: buy_ticket_service
+    ports:
+      - "5100:5100"
+    environment:
+      event_service_URL: http://event_service:5001
+      seat_service_URL: http://seat_service:5002
+      waitlist_service_URL: http://waitlist_service:5003
+      ticket_service_URL: http://ticket_service:5004
+      transaction_service_URL: http://transaction_service:5005
+      user_service_URL: http://user_service:5006
+      payment_service_URL: http://payment_service:5007
+      email_service_URL: http://email_service:5008
+    depends_on:
+      - event_service
+      - seat_service
+      - waitlist_service
+      - ticket_service
+      - transaction_service
+      - user_service
+      - payment_service
+      - email_service
+
+  ##################################
+  #? sell_ticket: The Sell Ticket microservice
+  ##################################
+
+  sell_ticket_service:
+    build: ./composite-microservices/sell_ticket/
+    container_name: sell_ticket_service
+    ports:
+      - "5101:5101"
+    environment:
+      waitlist_service_URL: http://waitlist_service:5003
+      ticket_service_URL: http://ticket_service:5004
+      user_service_URL: http://user_service:5006
+      email_service_URL: http://email_service:5008
+    depends_on:
+      - waitlist_service
+      - ticket_service
+      - user_service
+      - email_service                            
+
+  buy_resale_ticket_service:
+    build: ./composite-microservices/buy_resale_ticket/
+    container_name: buy_resale_ticket_service
+    ports:
+      - "5102:5102"
+    environment:
+      ticket_service_URL: http://ticket_service:5004
+      transaction_service_URL: http://transaction_service:5005
+      user_service_URL: http://user_service:5006
+      payment_service_URL: http://payment_service:5007
+      email_service_URL: http://email_service:5008
+    depends_on:
+      - ticket_service
+      - transaction_service
+      - user_service
+      - payment_service
+      - email_service       
+
+  check_in_ticket_service:
+    build: ./composite-microservices/check_in_ticket/
+    container_name: check_in_ticket_service
+    ports:
+      - "5103:5103"
+    environment:
+      ticket_service_URL: http://ticket_service:5004
+    depends_on:
+      - ticket_service
+
+  ##################################
+  #? rabbitmq: The rabbitmq broker
+  ##################################
+
+  rabbitmq:
+    image: rabbitmq
+    hostname: rabbitmq
+    container_name: rabbitmq
+    restart: always
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 30s
+      retries: 3
+      start_period: 10s
+      timeout: 10s
