@@ -71,14 +71,15 @@ def update_seat():
     '''Update seat status'''
     # Get the request data (seat status and other necessary details)
     data = request.get_json()
-
-    # Check if all necessary fields are present
-    if 'eventID' not in data or 'eventDateTime' not in data or 'seatNo' not in data:
-        return jsonify({"code": 400, "message": "eventID, eventDateTime and seatNo are required."}), 400
+    required_fields = ["eventID", "eventDateTime", "seatNo", "status"]
     
+    # Check if all necessary fields are present
     if 'status' not in data:
         return jsonify({"code": 400, "message": "Missing status."}), 400
 
+    if not all(field in data for field in required_fields):
+        return jsonify({"code": 400, "message": "Missing required fields."}), 400
+    
     seat = Seat.objects(eventID=data['eventID'], eventDateTime=data['eventDateTime'], seatNo=data['seatNo']).first()
 
     # Check if the seat is already booked
