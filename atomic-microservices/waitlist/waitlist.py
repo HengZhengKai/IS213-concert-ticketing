@@ -60,7 +60,7 @@ class Waitlist(db.Document): # tell flask what are the fields in your database
             "waitlistDate": self.waitlistDate.isoformat() if self.waitlistDate else None
         }
 
-@app.route("waitlist/event/<string:eventID>/<string:eventDateTime>")
+@app.route("waitlist/<string:eventID>/<string:eventDateTime>")
 def get_waitlist(eventID, eventDateTime):
     '''get all users in waitlist'''
     event_waitlist = Waitlist.objects(eventID=eventID, eventDateTime=eventDateTime).only("userID", "waitlistDate")
@@ -74,7 +74,7 @@ def get_waitlist(eventID, eventDateTime):
         "waitlist": [{"userID": w.userID, "waitlistDate": w.waitlistDate.isoformat()} for w in event_waitlist]
     }), 200
 
-@app.route('waitlist/event/<string:eventID>/<string:eventDateTime>', methods=['POST'])
+@app.route('waitlist/<string:eventID>/<string:eventDateTime>', methods=['POST'])
 def add_to_waitlist(eventID, eventDateTime):
     data = request.get_json()
     if not data or "userID" not in data:
