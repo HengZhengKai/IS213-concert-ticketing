@@ -4,5 +4,3 @@ mongoengine==0.29.1
 pymongo[srv]==4.6.0
 python-dotenv==1.0.0
 pytz==2024.2
-Werkzeug==3.0.0
-dnspython==2.4.2
