@@ -48,7 +48,7 @@ class Ticket(db.Document): # tell flask what are the fields in your database
     price = db.FloatField()
     resalePrice = db.FloatField(null=True) #resalePrice is None when first created
     status = db.StringField()
-    chargeID = db.StringField() # can be "" for mock tickets
+    paymentID = db.StringField() # can be "" for mock tickets
     isCheckedIn = db.BooleanField()
 
     def to_json(self):
@@ -62,7 +62,7 @@ class Ticket(db.Document): # tell flask what are the fields in your database
             "price": self.price,
             "resalePrice": self.resalePrice,
             "status": self.status,
-            "chargeID": self.chargeID,
+            "paymentID": self.paymentID,
             "isCheckedIn": self.isCheckedIn
         }
 
@@ -76,14 +76,14 @@ class Query(graphene.ObjectType):
     GraphQL Query class to fetch ticket details.
 
     Available Queries:
-    1. charge_id(ticketID: <string>): Returns the chargeID associated with a given ticket.
+    1. payment_id(ticketID: <string>): Returns the paymentID associated with a given ticket.
     2. is_checked_in(ticketID: <string>): Returns the check-in status (Boolean) of a given ticket.
     3. event_details(ticketID: <string>): Returns eventID and eventDateTime of a given ticket
 
     Example Queries:
     ```
     query {
-        chargeId(ticketID: "12345")
+        paymentId(ticketID: "12345")
     }
 
     query {
@@ -91,15 +91,15 @@ class Query(graphene.ObjectType):
     }
     ```
     """
-    charge_id = graphene.String(ticketID=graphene.String(required=True))
+    payment_id = graphene.String(ticketID=graphene.String(required=True))
     is_checked_in = graphene.Boolean(ticketID=graphene.String(required=True))
     event_details = graphene.Field(EventDetails, ticketID=graphene.String(required=True))
 
-    # Query for chargeID
-    def resolve_charge_id(self, info, ticketID):
+    # Query for paymentID
+    def resolve_payment_id(self, info, ticketID):
         ticket = Ticket.objects(ticketID=ticketID).first()
         if ticket:
-            return ticket.chargeID
+            return ticket.paymentID
         return None  # If no ticket found, return None
 
     # Query for isCheckedIn
@@ -208,7 +208,7 @@ def update_ticket(ticketID):
             "price": updated_ticket.price,
             "resalePrice": updated_ticket.resalePrice,
             "status": updated_ticket.status,
-            "chargeID": updated_ticket.chargeID,
+            "paymentID": updated_ticket.paymentID,
             "isCheckedIn": updated_ticket.isCheckedIn
         }
     }), 200
@@ -265,7 +265,7 @@ def create_ticket(ticketID):
             price=data["price"],
             resalePrice=data["resalePrice"],
             status=data["status"],
-            chargeID=data["chargeID"],
+            paymentID=data["paymentID"],
             isCheckedIn=data["isCheckedIn"]
         )
         ticket.save()
