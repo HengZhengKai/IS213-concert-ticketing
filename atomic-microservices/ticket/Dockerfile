@@ -21,4 +21,5 @@ RUN sed -i 's/from collections import namedtuple, MutableMapping/from collection
 # RUN sed -i 's/from collections import MutableMapping/from collections.abc import MutableMapping/' /app/venv/lib/python*/site-packages/graphql_server/__init__.py
 
 COPY ./ticket.py .
+COPY .env .
 CMD [ "python", "./ticket.py" ]

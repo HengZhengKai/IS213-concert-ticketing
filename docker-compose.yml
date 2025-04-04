@@ -118,7 +118,7 @@ services:
     ports:
       - "5008:5008"
     env_file:
-      - ./atomic-microservices/payment/.env
+      - ./atomic-microservices/email/.env
     depends_on:
       - rabbitmq
 
