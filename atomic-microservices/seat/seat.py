@@ -66,7 +66,7 @@ class Seat(db.Document):
         }
 
 #Route 1
-@app.route('/seats', methods=['PUT'])
+@app.route('/seat', methods=['PUT'])
 def update_seat():
     '''Update seat status'''
     # Get the request data (seat status and other necessary details)
@@ -90,6 +90,9 @@ def update_seat():
             "message": f"Seat already {seat.status}."
         }), 409
     
+    category = seat.category
+    price = seat.price
+
     # Update the seat status
     seat.update(status=data["status"])
 
@@ -99,6 +102,8 @@ def update_seat():
         "data": {
             "eventID": data['eventID'],
             "seatNo": data['seatNo'],
+            "category": category,
+            "price": price,
             "status": data["status"]
         }
     }), 200
