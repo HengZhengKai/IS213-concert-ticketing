@@ -1,247 +1,342 @@
-<!-- <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Event Ticketing</title>
-    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
-    <script defer src="static/api.js"></script>
-    <script defer src="static/main.js"></script>
-    <link rel="stylesheet" href="static/styles.css">
-</head>
-<body>
-    <div id="home">
-        <h1>Welcome to Event Ticketing</h1>
-        <div v-if="events.length">
-            <h2>Available Events</h2>
-            <ul>
-                <li v-for="event in events" :key="event.id">
-                    {{ event.name }} - <b>{{ event.date }}</b>
-                </li>
-            </ul>
-        </div>
-        <div v-else>
-            <p>Loading events...</p>
-        </div>
-        <a href="buy_ticket.html">Buy Ticket</a> |
-        <a href="resale_ticket.html">Resale Ticket</a> |
-        <a href="check_in.html">Check In</a>
-    </div>
-</body>
-</html> -->
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Event Ticketing</title>
-    <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
-    <script defer src="static/api.js"></script>
-    <script defer src="static/main.js"></script>
-    <link rel="stylesheet" href="static/styles.css">
-    <style>
-        .event-card {
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 16px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-            display: flex;
-            flex-direction: row;
-        }
-        .event-image {
-            width: 120px;
-            height: 120px;
-            object-fit: cover;
-            margin-right: 16px;
-            border-radius: 4px;
-            background-color: #f8f9fa;
-            cursor: pointer;
-            transition: transform 0.2s;
-        }
-        .event-image:hover {
-            transform: scale(1.05);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
-        .event-content {
-            flex: 1;
-        }
-        .event-title {
-            font-size: 1.5rem;
-            margin-bottom: 8px;
-        }
-        .event-detail {
-            margin-bottom: 4px;
-        }
-        .event-venue {
-            color: #555;
-        }
-        .event-date {
-            font-weight: bold;
-            color: #2a6496;
-        }
-        .event-description {
-            margin-top: 8px;
-            color: #666;
-        }
-        .nav-links {
-            margin-top: 24px;
-            padding-top: 16px;
-            border-top: 1px solid #eee;
-        }
-        .nav-links a {
-            display: inline-block;
-            padding: 8px 16px;
-            margin-right: 8px;
-            background-color: #4CAF50;
-            color: white;
-            text-decoration: none;
-            border-radius: 4px;
-        }
-        .loading {
-            color: #666;
-            font-style: italic;
-        }
-        .seats-info {
-            margin-top: 8px;
-            font-size: 0.9rem;
-        }
-        .sold-out {
-            color: #d9534f;
-            font-weight: bold;
-        }
-        .available {
-            color: #5cb85c;
-        }
-        .no-image {
-            width: 120px;
-            height: 120px;
-            background-color: #f8f9fa;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #999;
-            font-size: 12px;
-            border-radius: 4px;
-        }
-        .event-description {
-            white-space: pre-wrap;  /* Preserves whitespace and line breaks */
-            word-wrap: break-word;  /* Allows long words to break if needed */
-        }
-        /* Image Modal Styles */
-        .image-modal {
-            display: none;
-            position: fixed;
-            z-index: 1000;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0,0,0,0.8);
-            animation: fadeIn 0.3s;
-        }
-        
-        .image-modal.show {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        
-        .modal-content {
-            display: block;
-            max-width: 80%;
-            max-height: 80%;
-            margin: auto;
-            border: 3px solid white;
-            box-shadow: 0 0 20px rgba(0,0,0,0.3);
-        }
-        
-        .modal-close {
-            position: absolute;
-            top: 20px;
-            right: 30px;
-            color: white;
-            font-size: 35px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: color 0.2s;
-        }
-        
-        .modal-close:hover {
-            color: #bbb;
-        }
-        
-        .modal-event-name {
-            position: absolute;
-            bottom: 30px;
-            width: 100%;
-            text-align: center;
-            color: white;
-            font-size: 20px;
-            font-weight: bold;
-            text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
-        }
-        
-        @keyframes fadeIn {
-            from {opacity: 0}
-            to {opacity: 1}
-        }
-    </style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>Events</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <!-- Bootstrap core CSS -->
+  <link href="vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Additional CSS Files -->
+  <link rel="stylesheet" href="assets/css/fontawesome.css">
+  <link rel="stylesheet" href="assets/css/templatemo-villa-agency.css">
+  <link rel="stylesheet" href="assets/css/owl.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+  <link rel="stylesheet" href="https://unpkg.com/swiper@7/swiper-bundle.min.css" />
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <!-- Import your JavaScript file -->
+  <script defer src="static/api.js"></script>
+  <script defer src="static/main.js"></script>
 </head>
+<style>
+  .sold-out {
+            color: #d9534f !important; 
+            font-weight: bold;
+        }
+  .event-details-container {
+    background-color: #f8f9fa;
+    /* Light background to make it stand out */
+    padding: 15px;
+    /* Increased padding for spaciousness */
+    border-radius: 8px;
+    /* Rounded corners for a polished look */
+  }
+  .event-details-container h6 {
+    font-size: 1.4rem;
+    /* Increase font size for the heading */
+  }
+  .event-details-container p {
+    font-size: 1.1rem;
+    /* Slightly increase font size for details */
+    margin-bottom: 0.5rem;
+  }
+  .fade-out {
+    animation: fadeOut 1s forwards;
+  }
+  .fade-in {
+    animation: fadeIn 1s forwards;
+  }
+  /* Keyframes */
+  @keyframes fadeOut {
+    from {
+      opacity: 1;
+    }
+    to {
+      opacity: 0;
+    }
+  }
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+</style>
 <body>
-    <div id="home">
-        <h1>Welcome to Event Ticketing</h1>
-        <div v-if="events.length">
-            <h2>Available Events</h2>
-            <div class="event-card" v-for="event in events" :key="event.eventID || event.id">
-                <!-- Image with click event to open modal -->
-                <img v-if="event.imageBase64" 
-                    :src="event.imageBase64" 
-                    class="event-image" 
-                    :alt="event.name"
-                    @click="openImageModal(event)">
-                <div v-else class="no-image">No Image</div>
-                <div class="event-content">
-                    <h3 class="event-title">{{ event.name }}</h3>
-                    <p class="event-detail event-venue">Venue: {{ event.venue }}</p>
-                    <!-- <p class="event-detail event-date">Date: {{ event.date }}</p> -->
-                    <!-- Inside your event-content div -->
-                    <div v-if="event.allDates && event.allDates.length > 0" class="event-dates">
-                        <p><strong>All available dates:</strong></p>
-                        <ul>
-                        <li v-for="date in event.allDates" :key="date.dateTime">
-                            {{ date.formatted }} - 
-                            <span v-if="date.availableSeats === 0" class="sold-out">SOLD OUT</span>
-                            <span v-else class="available">{{ date.availableSeats }} seats available</span>
-                        </li>
-                        </ul>
-                    </div>
-                    <p class="event-description" v-html="event.description"></p>
-                    <!-- <div class="seats-info">
-                        <span v-if="event.availableSeats === 0" class="sold-out">SOLD OUT</span>
-                        <span v-else class="available">Available Seats: {{ event.availableSeats }}</span>
-                        <span> (Total Capacity: {{ event.totalSeats }})</span>
-                    </div> -->
-                </div>
-            </div>
+  <!-- Header Area Start -->
+  <header class="header-area header-sticky">
+    <div class="container">
+      <div class="row">
+        <div class="col-12">
+          <nav class="main-nav">
+            <a href="index.html" class="logo">
+              <h1>
+                <span>
+                  <inline>Events</inline>
+                </span>
+              </h1>
+            </a>
+            <ul class="nav">
+              <li><a href="buy_ticket.html"  class="active">Buy Ticket</a></li>
+              <li><a href="check_in.html">Check In</a></li>
+              <li><a href="resale_ticket.html">Resale</a></li>
+              <li id="profileLink">
+                <a href="profile.html" id="profileLinkRedir">
+                  <i class="fa fa-user" id="profileLinkImg"></i>
+                  <span id="profileLinkText">Profile</span>
+                </a>
+              </li>
+            </ul>
+            <a class="menu-trigger"><span>Menu</span></a>
+          </nav>
         </div>
-        <div v-else class="loading">
-            <p>Loading events...</p>
-        </div>
-        <div class="nav-links">
-            <a href="buy_ticket.html">Buy Ticket</a>
-            <a href="resale_ticket.html">Resale Ticket</a>
-            <a href="check_in.html">Check In</a>
-        </div>
-
-        <!-- Image Modal (Popup) -->
-        <div class="image-modal" :class="{ show: showModal }">
-            <span class="modal-close" @click="closeImageModal">&times;</span>
-            <img :src="currentImage" class="modal-content">
-            <div class="modal-event-name">{{ currentEventName }}</div>
-        </div>
+      </div>
     </div>
+  </header>
+  <div id="home" v-cloak>
+    <div class="page-heading header-text">
+      <div class="container">
+        <div class="row">
+          <div class="col-lg-12">
+            <span class="breadcrumb"><a href="index.html">Home</a> / Events</span>
+            <h3>Events</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="properties section">
+      <div class="container">
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+          <div class="col" v-for="event in events" :key="event.eventID || event.id">
+            <div class="item card h-100 animate__animated animate__fadeInUp">
+              <!-- Image Handling -->
+              <img v-if="event.imageBase64" :src="event.imageBase64" class="card-img-top" :alt="event.name" @click="openImageModal(event)" />
+              <div v-else class="no-image text-center">No Image</div>
+    
+              <div class="card-body">
+              
+                
+                <!-- Event Name and Venue -->
+                <h2 class="card-title">{{ event.name }}</h2>
+                <p class="event-detail event-venue"><strong>Venue:</strong> {{ event.venue }}</p>
+    
+                <!-- All Available Dates with Availability -->
+                <div v-if="event.allDates && event.allDates.length > 0" class="event-dates mb-3">
+                  <p><strong>All available dates:</strong></p>
+                  <ul class="list-group list-group-flush">
+                    <li v-for="date in event.allDates" :key="date.dateTime" class="list-group-item">
+                      {{ date.formatted }} -
+                      <span v-if="date.availableSeats === 0" class="sold-out">SOLD OUT</span>
+                      <span v-else class="available">{{ date.availableSeats }} seats available</span>
+                    </li>
+                  </ul>
+                </div>
+    
+              </div>
+    
+              <!-- Action Button to Open Modal -->
+              <div class="main-button text-center mb-3">
+                <a :href="event.link || '#'" class="btn btn-primary" @click="openEventModal(event)" data-bs-toggle="modal"
+                  data-bs-target="#eventModal">See more!</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Modal (Popup) -->
+    <div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalLabel" aria-hidden="true">
+      <div class="modal-dialog modal-md">
+        <div class="modal-content" v-if="selectedEvent">
+          <div class="modal-header">
+            <h5 class="modal-title" id="eventModalLabel">{{ selectedEvent.title }}</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"
+              @click="closeEventModal"></button>
+          </div>
+          <div class="modal-body">
+            <!-- Make the image take the full width of the modal -->
+            <img :src="selectedEvent.imageBase64" class="img-fluid w-100 mb-3" alt="Event Image">
+            <p><strong>Date:</strong> {{ selectedEvent.date }}</p>
+            <p><strong>Price:</strong> {{ selectedEvent.price }}</p>
+            <p><strong>Description:</strong> {{ selectedEvent.description }}</p>
+            <p><strong>Location:</strong> {{ selectedEvent.place }} (Postal Code: {{ selectedEvent.postal }})</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" @click="googleCreateEvent">Add to Calendar</button>
+            <button type="button" class="btn btn-success" @click="openSignupModal">Sign up</button>
+            <button type="button" class="btn btn-danger" data-bs-dismiss="modal" @click="closeEventModal">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Signup Modal -->
+    <div class="modal fade" id="signupModal" tabindex="-1" aria-labelledby="signupModalLabel" aria-hidden="true"
+      v-if="showSignupModal" style="background: rgba(0,0,0,0.5);">
+      <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="signupModalLabel">Sign Up for {{ selectedEvent.title }}</h5>
+            <button type="button" class="btn-close" @click="closeSignupModal"></button>
+          </div>
+          <div class="modal-body">
+            <!-- Event Details Summary -->
+            <div class="event-details-container row mb-4 p-3 bg-light rounded">
+              <div class="col-md-4">
+                <img :src="selectedEvent.imageBase64" class="img-fluid rounded" alt="Event Image">
+              </div>
+              <div class="col-md-8">
+                <h6>Event Details</h6>
+                <p class="mb-1"><small><strong>Event:</strong> {{ selectedEvent.name }}</small></p>
+                <p class="mb-1"><small><strong>Date:</strong> {{ selectedEvent.date }}</small></p>
+                <p class="mb-1"><small><strong>Location:</strong> {{ selectedEvent.venue }}</small></p>
+              
+              </div>
+            </div>
+            <!-- Attendee Forms Container -->
+            <div id="attendeeForms">
+              <div v-for="(form, index) in attendeeForms" :key="index" class="attendee-form mb-4">
+                <h6>Attendee {{ index + 1 }} Details</h6>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <input type="text" class="form-control" v-model="form.name" placeholder="Full Name">
+                  </div>
+                  <div class="col-md-6">
+                    <input type="email" class="form-control" v-model="form.email" placeholder="Email">
+                  </div>
+                  <div class="col-md-6">
+                    <input type="tel" class="form-control" v-model="form.phone" placeholder="Phone Number">
+                  </div>
+                  <div class="col-md-6">
+                    <input type="text" class="form-control" v-model="form.dietaryRestrictions"
+                      placeholder="Dietary Restrictions">
+                  </div>
+                  <div class="col-12">
+                    <textarea class="form-control" v-model="form.specialRequests" rows="2"
+                      placeholder="Special Requests or Notes"></textarea>
+                  </div>
+                  <div class="col-12 text-end mt-2">
+                    <button type="button" class="btn btn-danger btn-sm" @click="removeAttendeeForm(index)":disabled="attendeeForms.length === 1">Remove
+                      Attendee</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Add Another Attendee Button -->
+            <button class="btn btn-outline-primary mb-3" @click="addAttendeeForm">
+              <i class="fas fa-user-plus"></i> Add Another Attendee
+            </button>
+            <div class="collapse" id="collapseExample">
+              <div class="card card-body">
+                <form>
+                  <label for="cardName" class="form-label">Name on Card</label>
+                  <input type="text" placeholder="John Doe" class="form-control">
+                  <label for="cardNumber" class="form-label">Card Number</label>
+                  <div id="cardNumberContainer" style="position: relative;">
+                    <input type="text" v-model="cardNumber" placeholder="1234 5678 9012 3456" maxlength="16"
+                      @input="checkCardType" class="form-control" style="padding-right: 40px;">
+                    <img :src="cardLogo" id="cardLogo" alt="Card Logo" v-if="cardLogo"
+                      style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%); max-width: 30px;">
+                  </div>
+                  <label for="expiryDate" class="form-label">Expiry Date</label>
+                  <input type="text" placeholder="MM/YY" maxlength="5" class="form-control">
+                  <label for="cvc" class="form-label">CVC</label>
+                  <input type="text" placeholder="123" maxlength="3" class="form-control">
+                </form>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <div v-if="selectedEvent.price !== 'Free!'">
+              <h6><h6>Total Cost: ${{ attendeeForms.length * (selectedEvent.price ? selectedEvent.price.split('$')[1] : 0) }}</h6></h6>
+            </div>
+            <button type="button" class="btn btn-secondary" @click="closeSignupModal">Cancel</button>
+            <button v-if="selectedEvent.price === 'Free!'" type="button" class="btn btn-primary"
+              @click="submitRegistration">Submit Registration</button>
+            <button v-else-if="paymentReady === true" class="btn btn-success"
+              @click="togglePaymentReady(); submitRegistration() ">Pay Now</button>
+            <button v-else class="btn btn-primary" type="button" data-bs-toggle="collapse"
+              data-bs-target="#collapseExample" aria-expanded="false" aria-controls="collapseExample"
+              @click="togglePaymentReady()">
+              Proceed to Payment
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- Custom Login Prompt Modal for Events -->
+    <div class="modal fade" id="loginPromptModalEvents" tabindex="-1" aria-labelledby="loginPromptLabelEvents"
+      aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="loginPromptLabelEvents">Please Log In</h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+          </div>
+          <div class="modal-body">
+            <p>You need to log in to register for this event. Please log in to continue.</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+            <a href="login.html" class="btn btn-primary">Log In</a> <!-- Redirect to login page -->
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal fade" id="successModal" tabindex="-1" aria-labelledby="successModalLabel" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="successModalLabel">Success</h5>
+          </div>
+          <div class="modal-body">
+            <p>Sign up Successful! Please go to your profile to see your tickets</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal fade" id="successModal2" tabindex="-1" aria-labelledby="successModalLabel2" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="successModalLabel">Success</h5>
+          </div>
+          <div class="modal-body">
+            <p>Event has been added to your google calendar</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="modal fade" id="successModal3" tabindex="-1" aria-labelledby="successModalLabel3" aria-hidden="true">
+      <div class="modal-dialog">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="successModalLabel">Error</h5>
+          </div>
+          <div class="modal-body">
+            <p>Kindly fill up all the details in the form</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- Scripts -->
+  <script src="vendor/jquery/jquery.min.js"></script>
+  <script src="vendor/bootstrap/js/bootstrap.min.js"></script>
+  <script src="assets/js/isotope.min.js"></script>
+  <script src="assets/js/owl-carousel.js"></script>
+  <script src="assets/js/counter.js"></script>
+  <script src="assets/js/custom.js"></script>
 </body>
 </html>
-
