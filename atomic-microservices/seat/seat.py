@@ -5,7 +5,6 @@ from os import environ
 import os
 from datetime import datetime
 import urllib.parse
-from flasgger import Swagger
 import logging
 from dotenv import load_dotenv
 
@@ -17,7 +16,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
-swagger = Swagger(app)
 
 CORS(app)
 
