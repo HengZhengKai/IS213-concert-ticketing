@@ -15,6 +15,7 @@ waitlist_URL = "http://localhost:5003/waitlist"
 ticket_URL = "http://localhost:5004/ticket"
 ticket_microservice_url = "http://localhost:5004/graphql"
 user_URL = "http://localhost:5006/user"
+email_URL = "http://localhost:5008/email"
 
 @app.route("/sellticket/<string:ticketID>", methods=['POST']) # json body: resalePrice
 def sell_ticket(ticketID):
@@ -98,7 +99,7 @@ def process_sell_ticket(ticket):
 
     # Step 6-7. Get waitlist users
     print('\n-----Invoking waitlist microservice-----')
-    waitlist_users = invoke_http(f"{waitlist_URL}//waitlist/{eventID}/{eventDateTime}")
+    waitlist_users = invoke_http(f"{waitlist_URL}/waitlist/{eventID}/{eventDateTime}")
     
     if not waitlist_users:
         print("No users on waitlist.")
