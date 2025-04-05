@@ -1,5 +1,5 @@
 async function fetchSeats(eventID, eventDateID) {
-  const response = await fetch(`http://localhost:5001/seats?eventID=${eventID}&eventDateID=${eventDateID}`);
+  const response = await fetch(`http://localhost:5001/seats`);
   return await response.json();
 }
 

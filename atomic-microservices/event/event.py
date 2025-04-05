@@ -137,6 +137,7 @@ def get_all_events():
                     if date.eventDateTime:
                         sgt_time = date.eventDateTime.replace(tzinfo=pytz.UTC).astimezone(pytz.timezone('Asia/Singapore'))
                         event_info["dates"].append({
+                            "eventDateID": str(date.id),  # ✅ This line is new
                             "eventDateTime": sgt_time.isoformat(),
                             "availableSeats": date.availableSeats or 0,
                             "formattedDateTime": sgt_time.strftime("%d %B %Y at %I:%M %p SGT")
