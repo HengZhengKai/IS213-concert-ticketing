@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>Login</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <!-- Bootstrap core CSS -->
+  <link href="vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Additional CSS Files -->
+  <link rel="stylesheet" href="assets/css/fontawesome.css">
+  <link rel="stylesheet" href="assets/css/templatemo-villa-agency.css">
+  <link rel="stylesheet" href="assets/css/owl.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+  <link rel="stylesheet" href="https://unpkg.com/swiper@7/swiper-bundle.min.css" />
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <!-- Import your JavaScript file -->
+  <script defer src="static/api.js"></script>
+  <script defer src="static/main.js"></script>
+</head>
+<style>
+  .login-form-container {
+    background-color: #f8f9fa;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    max-width: 400px;
+    margin: auto;
+  }
+  .login-form-container h2 {
+    font-size: 2rem;
+    margin-bottom: 20px;
+  }
+  .form-control {
+    margin-bottom: 15px;
+  }
+  .login-btn {
+    width: 100%;
+    padding: 10px;
+    font-size: 1.1rem;
+    background-color: #dc3545; /* Custom red color */
+    color: white;
+    border: none;
+  }
+
+  .login-btn:hover {
+    width: 100%;
+    padding: 10px;
+    font-size: 1.1rem;
+    background-color: #8f1e29; /* Custom red color */
+    color: white;
+    border: none;
+  }
+
+  .error-message {
+    color: red;
+    font-size: 0.9rem;
+  }
+</style>
+<body>
+  <!-- Header Area Start -->
+  <header class="header-area header-sticky">
+    <div class="container">
+      <div class="row">
+        <div class="col-12">
+          <nav class="main-nav">
+            <a href="index.html" class="logo">
+              <h1>
+                <span>
+                  <inline>Events</inline>
+                </span>
+              </h1>
+            </a>
+        </div>
+      </div>
+    </div>
+  </header>
+  
+  <!-- Login Section Start -->
+  <div class="container">
+    <div class="row justify-content-center my-5">
+      <div class="col-lg-6">
+        <div class="login-form-container">
+          <h2 class="text-center">Login</h2>
+          <form id="loginForm" method="post" onsubmit="return validateForm()">
+            <div class="mb-3">
+              <input type="email" id="email" class="form-control" placeholder="Email Address" required>
+              <div id="emailError" class="error-message"></div>
+            </div>
+            <div class="mb-3">
+              <input type="password" id="password" class="form-control" placeholder="Password" required>
+            </div>
+            <div class="mb-3 text-end">
+              <a href="forgot_password.html">Forgot Password?</a>
+            </div>
+            <button type="submit" class="btn btn-primary login-btn">Log In</button>
+          </form>
+          <div class="mt-4 text-center">
+            <p>Don't have an account? <a href="signup.html">Sign up here</a></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="vendor/jquery/jquery.min.js"></script>
+  <script src="vendor/bootstrap/js/bootstrap.min.js"></script>
+  <script src="assets/js/isotope.min.js"></script>
+  <script src="assets/js/owl-carousel.js"></script>
+  <script src="assets/js/counter.js"></script>
+  <!-- <script src="assets/js/login.js"></script> -->
+  <!-- Replace the login.js script tag with your new request handling code -->
+<script>
+  // Login form submission
+  document.getElementById('loginForm').onsubmit = async function(e) {
+    e.preventDefault();
+
+    // Get email and password values
+    var email = document.getElementById("email").value;
+    var password = document.getElementById("password").value;
+
+    try {
+      // Send login credentials to the backend
+      const response = await fetch('http://localhost:5000/login', {  // Adjust the URL if needed
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok) {
+        // Handle successful login (e.g., store the JWT token)
+        localStorage.setItem('token', result.token);
+        window.location.href = '/dashboard.html';  // Redirect to a different page after login
+      } else {
+        // Show error message
+        alert(result.message || 'Login failed');
+      }
+    } catch (error) {
+      // Handle any network or other errors
+      console.error('Error during login:', error);
+      alert('Something went wrong. Please try again.');
+    }
+  };
+</script>
+
+
+
+  <script src="assets/js/custom.js"></script>
+
+  <script>
+    function validateForm() {
+      var email = document.getElementById("email").value;
+      var emailError = document.getElementById("emailError");
+      var password = document.getElementById("password").value;
+      var isValid = true;
+      
+      // Clear previous error message
+      emailError.innerText = "";
+      
+      // Simple email validation check
+      if (!email.includes("@") || !email.includes(".")) {
+        emailError.innerText = "Please enter a valid email address.";
+        isValid = false;
+      }
+
+      // Password validation (basic example)
+      if (password.length < 6) {
+        alert("Password must be at least 6 characters long.");
+        isValid = false;
+      }
+
+      return isValid;
+    }
+  </script>
+</body>
+</html>
