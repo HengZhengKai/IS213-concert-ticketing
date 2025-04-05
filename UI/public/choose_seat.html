@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Choose Seat</title>
+  <link href="vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="assets/css/fontawesome.css" />
+  <link rel="stylesheet" href="assets/css/templatemo-villa-agency.css" />
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script defer src="static/choose_seat.js"></script>
+</head>
+
+<style>
+    .seat-map {
+  margin-top: 30px;
+}
+
+.seat-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 8px;
+  border: none;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.seat-btn.available {
+  background-color: #28a745; /* green */
+}
+
+.seat-btn.reserved {
+  background-color: #6c757d; /* gray */
+  cursor: not-allowed;
+}
+
+.seat-btn:hover:not(:disabled) {
+  transform: scale(1.05);
+}
+
+</style>
+<body>
+  <header class="header-area header-sticky">
+    <div class="container">
+      <div class="row">
+        <div class="col-12">
+          <nav class="main-nav">
+            <a href="index.html" class="logo"><h1><span>Events</span></h1></a>
+            <ul class="nav">
+              <li><a href="buy_ticket.html">Buy Ticket</a></li>
+              <li><a href="check_in.html">Check In</a></li>
+              <li><a href="resale_ticket.html">Resale</a></li>
+              <li><a href="profile.html"><i class="fa fa-user"></i> Profile</a></li>
+            </ul>
+            <a class="menu-trigger"><span>Menu</span></a>
+          </nav>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div id="seatApp" class="container mt-5" v-cloak>
+    <h3 class="mb-4">Available Seats</h3>
+    <div id="seatApp" class="container mt-5" v-cloak>
+        <h3 class="mb-4">Choose Your Seat</h3>
+      
+        <div v-if="seats.length" class="seat-map">
+          <div class="row" v-for="row in seatRows" :key="row">
+            <div class="col-auto me-3 d-flex align-items-center"><strong>Row {{ row }}</strong></div>
+            <div class="col-auto d-flex flex-wrap">
+              <button
+                v-for="seat in getSeatsByRow(row)"
+                :key="seat._id"
+                class="seat-btn me-2 mb-2"
+                :class="{
+                  'available': seat.status === 'available',
+                  'reserved': seat.status === 'reserved'
+                }"
+                :disabled="seat.status !== 'available'"
+                @click="selectSeat(seat)"
+                :title="`Seat ${seat.seatNo}, Category ${seat.category}, $${seat.price}`"
+              >
+                {{ seat.seatNo }}
+              </button>
+            </div>
+          </div>
+        </div>
+      
+        <div v-else>
+          <p>No seats found.</p>
+        </div>
+      </div>
+      
+  </div>
+
+  <!-- Bootstrap -->
+  <script src="vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

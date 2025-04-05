@@ -173,12 +173,13 @@
                       <strong>{{ date.availableSeats }} seats available</strong>
                     </span>
                   </div>
-                    <button 
-                    v-if="date.availableSeats > 0"
-                    class="btn btn-primary btn-sm" 
-                    @click="chooseSeat(date)">
-                    Choose Seat
-                  </button>
+                  <a 
+                  v-if="date.availableSeats > 0"
+                  class="btn btn-primary btn-sm"
+                  :href="`choose_seat.html?eventID=${selectedEvent.id}&eventDateTime=${date.eventDateTime}`">
+                  Choose Seat
+                </a>
+                
 
                   <!-- Show "Join Waitlist" if sold out -->
                   <button 

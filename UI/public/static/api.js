@@ -44,7 +44,7 @@ async function fetchEvents() {
                         try {
                             const dateObj = new Date(date.eventDateTime);
                             allDates.push({
-                                dateTime: date.eventDateTime,
+                                eventDateTime: date.eventDateTime,  // Add this line
                                 formatted: dateObj.toLocaleDateString('en-SG', {
                                     year: 'numeric',
                                     month: 'long',
