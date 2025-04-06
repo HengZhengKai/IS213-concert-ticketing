@@ -36,6 +36,14 @@ document.addEventListener("DOMContentLoaded", () => {
       closeEventModal() {
         this.selectedEvent = {};
       },
+
+      formatDateTime(datetimeStr) {
+        const date = new Date(datetimeStr);
+        return date.toLocaleString("en-SG", {
+          dateStyle: "medium",
+          timeStyle: "short"
+        });
+      },
   
       // Add an attendee form
       addAttendeeForm() {
@@ -48,7 +56,49 @@ document.addEventListener("DOMContentLoaded", () => {
         };
         this.attendeeForms.push(attendeeForm);
       },
-  
+
+      async joinWaitlist(date) {
+        const user = JSON.parse(sessionStorage.getItem("user"));
+        if (!user) {
+          const loginPrompt = new bootstrap.Modal(document.getElementById('loginPromptModalEvents'));
+          loginPrompt.show();
+          return;
+        }
+      
+        const eventID = this.selectedEvent.id;
+        const rawDateTime = date.eventDateTime;
+        const encodedDateTime = encodeURIComponent(rawDateTime);  // ✅ Encode it properly
+      
+        try {
+          const response = await fetch(`http://localhost:5003/waitlist/${eventID}/${encodedDateTime}`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({ userID: user.email })
+          });
+      
+          const result = await response.json();
+      
+          if (response.status === 201) {
+            const msg = `You have joined the waitlist for "${this.selectedEvent.name}" on ${this.formatDateTime(rawDateTime)}`;
+            document.getElementById("waitlistSuccessMessage").textContent = msg;
+            const modal = new bootstrap.Modal(document.getElementById('waitlistModal'));
+            modal.show();
+          } else if (response.status === 409) {
+            const alreadyModal = new bootstrap.Modal(document.getElementById('alreadyInWaitlistModal'));
+            alreadyModal.show();
+          } else {
+            alert("An error occurred. Please try again.");
+          }
+      
+        } catch (err) {
+          console.error("Error joining waitlist:", err);
+          alert("Something went wrong. Try again later.");
+        }
+      },
+      
+
       // Remove an attendee form
       removeAttendeeForm(index) {
         if (this.attendeeForms.length > 1) {
@@ -143,6 +193,7 @@ document.addEventListener("DOMContentLoaded", () => {
     },
   }).mount("#home");
 
+
 const buyTicketApp = Vue.createApp({
     data() {
         return { tickets: [], message: "" };
@@ -181,3 +232,5 @@ const checkinApp = Vue.createApp({
         }
     }
 }).mount("#checkin");
+
+
