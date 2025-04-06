@@ -203,6 +203,7 @@ def update_ticket(ticketID):
         "data": {
             "ticketID": updated_ticket.ticketID,
             "ownerID": updated_ticket.ownerID,
+            "ownerName": updated_ticket.ownerName,
             "eventID": updated_ticket.eventID,
             "eventDateTime": updated_ticket.eventDateTime,
             "seatNo": updated_ticket.seatNo,
@@ -232,7 +233,7 @@ def create_ticket(ticketID):
         data = request.get_json()
 
         # Validate input
-        required_fields = ["ownerID", "eventID", "eventDateTime", "seatNo", "seatCategory", "price", "status", "chargeID", "isCheckedIn"]
+        required_fields = ["ownerID", "ownerName", "eventID", "eventDateTime", "seatNo", "seatCategory", "price", "status", "chargeID", "isCheckedIn"]
         if any(field not in data for field in required_fields):
             return jsonify({
                 "code": 400,
@@ -261,6 +262,7 @@ def create_ticket(ticketID):
         ticket = Ticket(
             ticketID=ticketID,
             ownerID=data["ownerID"],
+            ownerName=data["ownerName"],
             eventID=data["eventID"],
             seatNo=data["seatNo"],
             seatCategory=data["seatCategory"],
