@@ -17,7 +17,9 @@ const app = Vue.createApp({
       },
       maxSelectionLimit: 5,
       selectionError: '',
-      showError: false
+      showError: false,
+      showSignupModal: false,
+      attendeeForms: [],
     };
   },
   methods: {
@@ -64,19 +66,36 @@ const app = Vue.createApp({
       if (seat.status !== 'available') return;
       const index = this.selectedSeats.findIndex(s => s.seatNo === seat.seatNo && s.category === seat.category);
       if (index !== -1) {
-        this.selectedSeats.splice(index, 1); // deselect
+        this.selectedSeats.splice(index, 1);
+        this.attendeeForms.splice(index, 1);
         this.selectionError = '';
         this.showError = false;
       } else {
         if (this.selectedSeats.length >= this.maxSelectionLimit) {
           this.selectionError = `You can only select a maximum of ${this.maxSelectionLimit} seats.`;
           this.showError = true;
-          setTimeout(() => this.showError = false, 3000); // Auto-hide after 3s
+          setTimeout(() => this.showError = false, 3000);
         } else {
-          this.selectedSeats.push(seat); // select
+          this.selectedSeats.push(seat);
+          this.attendeeForms.push({ name: '', email: '', phone: '', dietaryRestrictions: '', specialRequests: '' });
           this.selectionError = '';
           this.showError = false;
         }
+      }
+    },
+    addAttendeeForm() {
+      if (this.attendeeForms.length < this.selectedSeats.length) {
+        this.attendeeForms.push({ name: '', email: '', phone: '', dietaryRestrictions: '', specialRequests: '' });
+      } else {
+        this.selectionError = `You can only add as many attendees as selected seats.`;
+        this.showError = true;
+        setTimeout(() => this.showError = false, 3000);
+      }
+    },
+    removeAttendeeForm(index) {
+      if (this.attendeeForms.length > 1) {
+        this.attendeeForms.splice(index, 1);
+        this.selectedSeats.splice(index, 1);
       }
     },
     isSelected(seat) {
@@ -104,6 +123,42 @@ const app = Vue.createApp({
         const availableSeats = this.seatsByCategory[category].filter(seat => seat.status === 'available').length;
         return `✅ ${availableSeats} seat(s) available in Category ${category}`;
       }
+    },
+    openSignupModal() {
+      if (this.canCheckout) {
+        this.$nextTick(() => {
+          const modalEl = document.getElementById("signupModal");
+          if (modalEl) {
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+          }
+        });
+      } else {
+        this.selectionError = 'Please select at least one seat before proceeding.';
+        this.showError = true;
+        setTimeout(() => this.showError = false, 3000);
+      }
+    },
+    validateEmail(email) {
+      const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return regex.test(email);
+    },
+    validatePhone(phone) {
+      const regex = /^\+\d{1,3}\d{7,12}$/;
+      return regex.test(phone);
+    },
+    validateForm() {
+      for (const form of this.attendeeForms) {
+        if (!form.name || !this.validateEmail(form.email) || !this.validatePhone(form.phone)) {
+          this.selectionError = 'Please ensure all attendee emails and phone numbers are valid.';
+          this.showError = true;
+          setTimeout(() => this.showError = false, 3000);
+          return false;
+        }
+      }
+      this.selectionError = '';
+      this.showError = false;
+      return true;
     }
   },
   computed: {
@@ -111,7 +166,7 @@ const app = Vue.createApp({
       return this.selectedSeats.length;
     },
     canCheckout() {
-      return this.selectedSeats.length === 1;
+      return this.selectedSeats.length >= 1 && this.selectedSeats.length <= this.maxSelectionLimit;
     }
   },
   mounted() {
