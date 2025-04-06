@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, redirect
 from flask_cors import CORS
 #import stripe
 import os
@@ -17,7 +17,44 @@ app = Flask(__name__)
 
 CORS(app)
 
+@app.route("/start-checkout", methods=["POST"])
+def start_checkout():
+    try:
+          
+        stripe_key = os.getenv("STRIPE_SECRET_KEY")
+        
+        outsystems_url = "https://personal-5nnqipga.outsystemscloud.com/Stripe/rest/payments/checkout"
+        
+        payload = {
+            "mode": "payment",
+            "success_url": "https://httpbin.org/status/200",
+            "cancel_url": "https://httpbin.org/status/400",
+            "currency": "sgd",
+            "product_name": "Test Tour",
+            "unit_amount": 500,
+            "quantity": 1
+        }
 
+        headers = {
+             "Content-Type": "application/json",
+             "Authorization": f"Bearer {stripe_key}"}
+
+        response = requests.post(outsystems_url, json=payload, headers=headers)
+        response.raise_for_status()
+
+        data = response.json()
+        session_id = data["id"]
+        if not session_id:
+            return jsonify({"error": "No session ID in response"}), 500
+
+        checkout_url = f"https://checkout.stripe.com/pay/{session_id}"
+        return redirect(checkout_url, code=303)
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=5007, debug=True)
 # newpayment = "https://personal-5nnqipga.outsystemscloud.com/Stripe/rest/payments/newpayment"
 
 # headers = {
@@ -83,86 +120,86 @@ CORS(app)
 #             "totalSeats": self.totalSeats,
 #         }
 
-@app.route('/makepayment', methods=['POST'])
-def make_payment():
-    try:
-        # Extracting data from request body
-        req_data = request.get_json()
-        stripe_key = os.getenv("STRIPE_SECRET_KEY")
+# @app.route('/makepayment', methods=['POST'])
+# def make_payment():
+#     try:
+#         # Extracting data from request body
+#         req_data = request.get_json()
+#         stripe_key = os.getenv("STRIPE_SECRET_KEY")
 
 
-        amount = req_data.get('amount')
-        currency = req_data.get('currency', 'sgd')  # default to SGD
-        payment_method = req_data.get('payment_method')
-        customer = req_data.get('customer')
+#         amount = req_data.get('amount')
+#         currency = req_data.get('currency', 'sgd')  # default to SGD
+#         payment_method = req_data.get('payment_method')
+#         customer = req_data.get('customer')
 
-        # Check required fields
-        if not all([amount, currency, payment_method, customer]):
-            return jsonify({"error": "Missing required payment fields"}), 400
+#         # Check required fields
+#         if not all([amount, currency, payment_method, customer]):
+#             return jsonify({"error": "Missing required payment fields"}), 400
 
-        newpayment_url = "https://personal-5nnqipga.outsystemscloud.com/Stripe/rest/payments/newpayment"
+#         newpayment_url = "https://personal-5nnqipga.outsystemscloud.com/Stripe/rest/payments/newpayment"
 
-        headers = {
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {stripe_key}"}
+#         headers = {
+#             "Content-Type": "application/json",
+#             "Authorization": f"Bearer {stripe_key}"}
 
-        payload = {
-            "amount": amount,
-            "currency": currency,
-            "payment_method": payment_method,
-            "customer": customer,
-            "confirm": True,
-            "off_session": True,
-            "automatic_payment_methods": {
-                "enabled": True,
-                "allow_redirects": "never"
-            }
-        }
+#         payload = {
+#             "amount": amount,
+#             "currency": currency,
+#             "payment_method": payment_method,
+#             "customer": customer,
+#             "confirm": True,
+#             "off_session": True,
+#             "automatic_payment_methods": {
+#                 "enabled": True,
+#                 "allow_redirects": "never"
+#             }
+#         }
 
-        response = requests.post(newpayment_url, json=payload, headers=headers)
+#         response = requests.post(newpayment_url, json=payload, headers=headers)
 
-        if response.status_code == 200:
-            return jsonify({"success": True, "data": response.json()})
-        else:
-            return jsonify({"error": "Payment failed", "details": response.text}), response.status_code
+#         if response.status_code == 200:
+#             return jsonify({"success": True, "data": response.json()})
+#         else:
+#             return jsonify({"error": "Payment failed", "details": response.text}), response.status_code
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+#     except Exception as e:
+#         return jsonify({"error": str(e)}), 500
     
 
 
-@app.route('/makerefund', methods=['POST'])
-def make_refund():
-        try:
-            # Get Stripe secret key from environment variable
-            stripe_key = os.getenv("STRIPE_SECRET_KEY")
+# @app.route('/makerefund', methods=['POST'])
+# def make_refund():
+#         try:
+#             # Get Stripe secret key from environment variable
+#             stripe_key = os.getenv("STRIPE_SECRET_KEY")
 
-            # Get refund request data
-            req_data = request.get_json()
-            payment_intent = req_data.get("payment_intent")
-            reason = req_data.get("reason", "")  # Optional
+#             # Get refund request data
+#             req_data = request.get_json()
+#             payment_intent = req_data.get("payment_intent")
+#             reason = req_data.get("reason", "")  # Optional
 
-            if not payment_intent:
-                return jsonify({"error": "Missing required field: payment_intent"}), 400
+#             if not payment_intent:
+#                 return jsonify({"error": "Missing required field: payment_intent"}), 400
 
-            refund_url = "https://personal-5nnqipga.outsystemscloud.com/Stripe/rest/payments/refund"
+#             refund_url = "https://personal-5nnqipga.outsystemscloud.com/Stripe/rest/payments/refund"
             
-            headers = {
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {stripe_key}"
-            }
+#             headers = {
+#                 "Content-Type": "application/json",
+#                 "Authorization": f"Bearer {stripe_key}"
+#             }
 
-            payload = {
-                "payment_intent": payment_intent,
-                "reason": reason
-            }
+#             payload = {
+#                 "payment_intent": payment_intent,
+#                 "reason": reason
+#             }
 
-            response = requests.post(refund_url, json=payload, headers=headers)
+#             response = requests.post(refund_url, json=payload, headers=headers)
 
-            if response.status_code == 200:
-                return jsonify({"success": True, "refund": response.json()}), 200
-            else:
-                return jsonify({"error": "Refund failed", "details": response.text}), response.status_code
+#             if response.status_code == 200:
+#                 return jsonify({"success": True, "refund": response.json()}), 200
+#             else:
+#                 return jsonify({"error": "Refund failed", "details": response.text}), response.status_code
 
-        except Exception as e:
-            return jsonify({"error": str(e)}), 500
+#         except Exception as e:
+#             return jsonify({"error": str(e)}), 500
