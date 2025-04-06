@@ -77,6 +77,10 @@ class EventDetails(graphene.ObjectType):
     eventID = graphene.String()
     eventDateTime = graphene.DateTime()
 
+class OwnerDetails(graphene.ObjectType):
+    ownerID = graphene.String()
+    ownerName = graphene.String()
+
 class Query(graphene.ObjectType):
     """
     GraphQL Query class to fetch ticket details.
@@ -102,11 +106,19 @@ class Query(graphene.ObjectType):
             eventDateTime
         }
     }
+
+    query {
+        ownerDetails(ticketID: "T001") {
+            ownerID
+            ownerName
+        }
+    }
     ```
     """
     payment_id = graphene.String(ticketID=graphene.String(required=True))
     is_checked_in = graphene.Boolean(ticketID=graphene.String(required=True))
     event_details = graphene.Field(EventDetails, ticketID=graphene.String(required=True))
+    owner_details = graphene.Field(EventDetails, ticketID=graphene.String(required=True))
 
     # Query for paymentID
     def resolve_payment_id(self, info, ticketID):
@@ -128,6 +140,14 @@ class Query(graphene.ObjectType):
         ticket = Ticket.objects(ticketID=ticketID).first()
         if ticket:
             return EventDetails(eventID=ticket.eventID, eventDateTime=ticket.eventDateTime)
+        return None 
+    
+    # Query for ownerDetails
+    def resolve_owner_details(self, info, ticketID):
+        """Resolves owner details (ownerID and owner name) for the given ticketID."""
+        ticket = Ticket.objects(ticketID=ticketID).first()
+        if ticket:
+            return OwnerDetails(ownerID=ticket.ownerID, ownerName=ticket.ownerName)
         return None 
     
 # Define the schema
