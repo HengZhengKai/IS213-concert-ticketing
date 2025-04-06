@@ -10,7 +10,7 @@ import requests
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
-from flasgger import Swagger
+import time  # Add this to the top of your imports
 
 # Load environment variables
 load_dotenv()
@@ -22,7 +22,6 @@ logger = logging.getLogger(__name__)
 # Flask app setup
 app = Flask(__name__)
 CORS(app)
-swagger = Swagger(app)
 
 # Email configuration
 SMTP_SERVER = os.getenv('SMTP_SERVER', 'smtp.gmail.com')
@@ -70,8 +69,32 @@ def get_user_email(user_id):
         logger.error(f"Error fetching user email: {e}")
         return None
 
+def get_user_tickets(user_id):
+    """
+    Get all tickets for a specific user from Ticket Service
+    
+    Args:
+        user_id (str): User ID
+            
+    Returns:
+        list: List of ticket details or empty list if none found
+    """
+    try:
+        TICKET_SERVICE_URL = os.getenv('TICKET_SERVICE_URL', 'http://ticket-service:5004')
+        
+        response = requests.get(f"{TICKET_SERVICE_URL}/ticket/{user_id}")
+        
+        if response.status_code == 200:
+            return response.json().get('data', [])
+        
+        logger.warning(f"Failed to get tickets for user {user_id}. Status code: {response.status_code}")
+        return []
+    except Exception as e:
+        logger.error(f"Error fetching user tickets: {e}")
+        return []
+    
 def connect_to_rabbitmq():
-    """Establish connection to RabbitMQ and set up channels"""
+    """Establish connection to RabbitMQ"""
     global rabbitmq_connection, rabbitmq_channel
     
     try:
@@ -81,6 +104,8 @@ def connect_to_rabbitmq():
             host=RABBITMQ_HOST,
             port=RABBITMQ_PORT,
             credentials=credentials,
+            connection_attempts=3,  # Retry connection 3 times
+            retry_delay=5,          # Wait 5 seconds between retries
             heartbeat=600,
             blocked_connection_timeout=300
         )
@@ -159,20 +184,23 @@ def handle_ticket_purchase(ch, method, properties, body):
         
         # Get required data
         user_id = data.get('user_id')
+        user_name = data.get('user_name', 'Customer')
         ticket_id = data.get('ticket_id')
+        event_id = data.get('event_id')
         event_name = data.get('event_name')
         event_date = data.get('event_date')
-        seat_info = data.get('seat_info')
+        seat_no = data.get('seat_no')
+        seat_category = data.get('seat_category')
+        seat_info = data.get('seat_info') or f"{seat_category}, Seat {seat_no}"
+        price = data.get('price', 0)
         
-        # Message could contain either user_email directly or user_id
+        # Get user email
         user_email = data.get('user_email')
-        
-        # If no email provided but user_id is, fetch email from User Service
         if not user_email and user_id:
             user_email = get_user_email(user_id)
             
         if not user_email:
-            logger.error(f"No email address found for ticket purchase notification")
+            logger.error("No email address found for ticket purchase notification")
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
             return
         
@@ -183,11 +211,13 @@ def handle_ticket_purchase(ch, method, properties, body):
         <html>
         <body>
             <h2>Your Ticket Purchase Confirmation</h2>
-            <p>Thank you for your purchase!</p>
-            <p>Event: <strong>{event_name}</strong></p>
+            <p>Thank you for your purchase, {user_name}!</p>
+            <p>Event: <strong>{event_name}</strong> (ID: {event_id})</p>
             <p>Date: {event_date}</p>
             <p>Ticket ID: {ticket_id}</p>
-            <p>Seat Information: {seat_info}</p>
+            <p>Seat: {seat_no}</p>
+            <p>Category: {seat_category}</p>
+            <p>Price: ${price}</p>
             <p>Please show this email or your ticket ID when checking in.</p>
         </body>
         </html>
@@ -212,12 +242,19 @@ def handle_ticket_resale(ch, method, properties, body):
         
         # Get required data
         buyer_id = data.get('buyer_id')
+        buyer_name = data.get('buyer_name', 'Customer')
         seller_id = data.get('seller_id')
+        seller_name = data.get('seller_name', 'Customer')
         ticket_id = data.get('ticket_id')
+        event_id = data.get('event_id')
         event_name = data.get('event_name')
-        price = data.get('price')
+        seat_no = data.get('seat_no')
+        seat_category = data.get('seat_category')
+        price = data.get('price', 0)
+        charge_id = data.get('charge_id', 'N/A')
+        refund_amount = data.get('refund_amount', price)
         
-        # Get emails - either directly provided or fetch from user service
+        # Get emails
         buyer_email = data.get('buyer_email')
         seller_email = data.get('seller_email')
         
@@ -234,9 +271,12 @@ def handle_ticket_resale(ch, method, properties, body):
             <html>
             <body>
                 <h2>Resale Ticket Purchase Confirmation</h2>
+                <p>Hello {buyer_name},</p>
                 <p>You have successfully purchased a resale ticket!</p>
-                <p>Event: <strong>{event_name}</strong></p>
+                <p>Event: <strong>{event_name}</strong> (ID: {event_id})</p>
                 <p>Ticket ID: {ticket_id}</p>
+                <p>Seat: {seat_no}</p>
+                <p>Category: {seat_category}</p>
                 <p>Price: ${price}</p>
             </body>
             </html>
@@ -250,10 +290,15 @@ def handle_ticket_resale(ch, method, properties, body):
             <html>
             <body>
                 <h2>Ticket Resale Confirmation</h2>
+                <p>Hello {seller_name},</p>
                 <p>Your ticket has been successfully resold!</p>
-                <p>Event: <strong>{event_name}</strong></p>
+                <p>Event: <strong>{event_name}</strong> (ID: {event_id})</p>
                 <p>Ticket ID: {ticket_id}</p>
+                <p>Seat: {seat_no}</p>
+                <p>Category: {seat_category}</p>
                 <p>Resale Price: ${price}</p>
+                <p>You have been refunded ${refund_amount}</p>
+                <p>Charge ID: {charge_id}</p>
             </body>
             </html>
             """
@@ -265,6 +310,58 @@ def handle_ticket_resale(ch, method, properties, body):
         
     except Exception as e:
         logger.error(f"Error processing ticket resale: {e}")
+        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+
+def handle_waitlist_notification(ch, method, properties, body):
+    """Handle waitlist notification email"""
+    try:
+        data = json.loads(body)
+        logger.info(f"Received waitlist notification: {data}")
+        
+        # Get required data
+        user_id = data.get('user_id')
+        user_name = data.get('user_name', 'Customer')
+        event_id = data.get('event_id')
+        event_name = data.get('event_name')
+        event_date = data.get('event_date')
+        expiration_time = data.get('expiration_time', '24 hours')
+        
+        # Get user email
+        user_email = data.get('user_email')
+        if not user_email and user_id:
+            user_email = get_user_email(user_id)
+            
+        if not user_email:
+            logger.error(f"No email address found for waitlist notification")
+            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+            return
+        
+        # Create email content
+        subject = f"Tickets Now Available for {event_name}"
+        
+        html_content = f"""
+        <html>
+        <body>
+            <h2>Waitlist Notification</h2>
+            <p>Hello {user_name},</p>
+            <p>Good news! Tickets are now available for resale for event:</p>
+            <p><strong>{event_name}</strong> (ID: {event_id}) on {event_date}</p>
+            <p>As you were on our waitlist, you now have priority access to purchase tickets.</p>
+            <p><strong>This offer expires in: {expiration_time}</strong></p>
+            <p>Please log in to your account to complete your purchase.</p>
+        </body>
+        </html>
+        """
+        
+        # Send email
+        send_email(user_email, subject, html_content)
+        
+        # Acknowledge message
+        ch.basic_ack(delivery_tag=method.delivery_tag)
+        logger.info(f"Waitlist notification email sent to {user_email}")
+        
+    except Exception as e:
+        logger.error(f"Error processing waitlist notification: {e}")
         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
 def handle_ticket_checkin(ch, method, properties, body):
@@ -664,18 +761,17 @@ def stop_consumer():
             "message": f"Failed to stop consumer: {str(e)}"
         }), 500
 
-# Start consumer thread when app starts
-@app.before_first_request
-def before_first_request():
-    """Initialize RabbitMQ consumer before first request"""
-    global consumer_thread
-    
-    # Start consumer in a new thread
-    consumer_thread = threading.Thread(target=consumer_thread_function)
-    consumer_thread.daemon = True
-    consumer_thread.start()
 
 if __name__ == "__main__":
+    # Attempt to connect to RabbitMQ
+    connection_attempts = 0
+    while connection_attempts < 3:
+        if connect_to_rabbitmq():
+            break
+        connection_attempts += 1
+        logger.warning(f"Connection attempt {connection_attempts} failed. Retrying...")
+        time.sleep(5)
+    
     # Start consumer thread
     consumer_thread = threading.Thread(target=consumer_thread_function)
     consumer_thread.daemon = True
