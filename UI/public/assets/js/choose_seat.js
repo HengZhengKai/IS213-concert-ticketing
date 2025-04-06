@@ -16,7 +16,8 @@ const app = Vue.createApp({
         C: false
       },
       maxSelectionLimit: 5,
-      selectionError: ''
+      selectionError: '',
+      showError: false
     };
   },
   methods: {
@@ -65,12 +66,16 @@ const app = Vue.createApp({
       if (index !== -1) {
         this.selectedSeats.splice(index, 1); // deselect
         this.selectionError = '';
+        this.showError = false;
       } else {
         if (this.selectedSeats.length >= this.maxSelectionLimit) {
           this.selectionError = `You can only select a maximum of ${this.maxSelectionLimit} seats.`;
+          this.showError = true;
+          setTimeout(() => this.showError = false, 3000); // Auto-hide after 3s
         } else {
           this.selectedSeats.push(seat); // select
           this.selectionError = '';
+          this.showError = false;
         }
       }
     },
@@ -91,6 +96,14 @@ const app = Vue.createApp({
     },
     totalSelectedPrice() {
       return this.selectedSeats.reduce((sum, seat) => sum + seat.price, 0).toFixed(2);
+    },
+    categoryNotice(category) {
+      if (this.categoryFull[category]) {
+        return `⚠️ All seats in Category ${category} are filled.`;
+      } else {
+        const availableSeats = this.seatsByCategory[category].filter(seat => seat.status === 'available').length;
+        return `✅ ${availableSeats} seat(s) available in Category ${category}`;
+      }
     }
   },
   computed: {

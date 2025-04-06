@@ -21,7 +21,6 @@
     }
     .available { background-color: #28a745; color: white; }
     .reserved { background-color: #ffc107; color: black; cursor: not-allowed; }
-    .taken { background-color: #dc3545; color: white; cursor: not-allowed; }
     .selected { background-color: #007bff !important; color: white !important; }
 
     .category-section {
@@ -69,6 +68,10 @@
     <div v-else>
       <div v-for="category in categories" :key="category" class="category-section">
         <h4 class="text-center mb-3">Category {{ category }}</h4>
+        <div class="text-center my-2 fw-bold" :class="categoryFull[category] ? 'text-danger' : 'text-success'">
+            {{ categoryNotice(category) }}
+          </div>
+          
         <div :style="seatRowStyle(category)">
           <div
             v-for="seat in seatsByCategory[category]"
@@ -80,9 +83,8 @@
             {{ seat.seatNo }}
           </div>
         </div>
-        <p v-if="categoryFull[category]" class="text-danger text-center mt-2">
-          All seats in Category {{ category }} are filled.
-        </p>
+
+      
       </div>
       <!-- Error Banner at Top -->
         <div v-if="selectionError" class="alert alert-danger text-center fixed-top" style="z-index: 1050;">
