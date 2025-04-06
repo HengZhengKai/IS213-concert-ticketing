@@ -18,9 +18,9 @@ channel = connection.channel()
 
 waitlist_URL = "http://localhost:5003/waitlist"
 ticket_URL = "http://localhost:5004/ticket"
-ticket_microservice_url = "http://localhost:5004/graphql"
 user_URL = "http://localhost:5006/user"
 email_URL = "http://localhost:5008/email"
+celery_URL = "http://localhost:5009/send_waitlist_emails"
 
 @app.route("/sellticket/<string:ticketID>", methods=['POST']) # json body: resalePrice
 def sell_ticket(ticketID):
@@ -87,7 +87,7 @@ def process_sell_ticket(ticket):
     }
     """
     variables = {"ticketID": ticket.ticketID}
-    response = requests.post(ticket_microservice_url, json={'query': query, 'variables': variables})
+    response = requests.post(f"{ticket_URL}/graphql", json={'query': query, 'variables': variables})
     
     # Step 5: Process event details to call the right waitlist route
     event_data = response.json()
@@ -109,7 +109,34 @@ def process_sell_ticket(ticket):
         print("No users on waitlist.")
         return {'status': 404, 'message': 'No users on waitlist.'}
     
-    # Step 8: Email waitlist users
-    
-    
+    # Step 8: Email all waitlist users
+    payload = {
+        "waitlist_users": waitlist_users["data"],
+        "ticket": {
+            "event_name": ticket["event_name"],
+            "event_date": eventDateTime,
+            "expiration_time": "15 minutes"
+        }
+    }
 
+    celery_result = invoke_http(f"{celery_URL}", method='POST', json=payload)
+
+    if celery_result["code"] not in range(200, 300):
+        return {
+            "code": 500,
+            "data": {"celery_result": celery_result},
+            "message": "Error, sent for error handling."
+        }
+
+    # Step 9: Return Ticket up for Resale
+    return {
+        "code": 201,
+        "data": {
+            "ticketID": ticket.ticketID,
+            "resalePrice": ticket.resalePrice
+        },
+        "message": "Ticket up for resale."
+    }
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5101, debug=True)
