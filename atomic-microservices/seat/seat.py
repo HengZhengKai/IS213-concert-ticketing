@@ -80,7 +80,7 @@ def update_seat():
     
     seat = Seat.objects(eventID=data['eventID'], eventDateTime=data['eventDateTime'], seatNo=data['seatNo']).first()
 
-    # Check if the seat is already booked
+    # Check if the seat is already reserved
     if data["status"] == seat.status:
         return jsonify({
             "code": 409,
