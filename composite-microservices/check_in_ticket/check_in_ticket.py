@@ -13,8 +13,6 @@ CORS(app)
 
 ticket_URL = "http://localhost:5004/ticket"
 
-ticket_microservice_url = "http://localhost:5004/graphql"  # Ticket microservice runs on localhost:5004
-
 # Function to check if the ticket is checked in using GraphQL
 def is_ticket_checked_in(ticketID):
     query = """
@@ -23,7 +21,7 @@ def is_ticket_checked_in(ticketID):
     }
     """
     variables = {"ticketID": ticketID}
-    response = requests.post(ticket_microservice_url, json={'query': query, 'variables': variables})
+    response = requests.post(f"{ticket_URL}/graphql", json={'query': query, 'variables': variables})
     
     if response.status_code == 200:
         data = response.json()
