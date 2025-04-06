@@ -1,11 +1,11 @@
-async function fetchSeats(eventID, eventDateID) {
+async function fetchSeats(eventID, eventDateTime) {
   const response = await fetch(`http://localhost:5001/seats`);
   return await response.json();
 }
 
 const urlParams = new URLSearchParams(window.location.search);
 const eventID = urlParams.get("eventID");
-const eventDateID = urlParams.get("eventDateID");
+const eventDateTime = urlParams.get("eventDateTime");
 
 Vue.createApp({
   data() {
@@ -25,7 +25,7 @@ Vue.createApp({
     },
   },
   async created() {
-    this.seats = await fetchSeats(eventID, eventDateID);
+    this.seats = await fetchSeats(eventID, eventDateTime);
   },
   methods: {
     getRowLabel(seatNo) {
