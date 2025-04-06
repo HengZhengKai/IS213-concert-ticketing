@@ -75,8 +75,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 SessionManager.setUserSession(data.user);
                 // Redirect to index page
                 window.location.href = 'index.html';
-            } else {
-                console.error('Login failed:', data.message);
+                console.error(data.message);
+            } else {               
                 showError(data.message || 'Login failed. Please try again.');
             }
         } catch (error) {
