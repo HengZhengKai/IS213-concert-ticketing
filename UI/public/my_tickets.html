@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>My Tickets</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link href="vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <script defer src="assets/js/my_tickets.js"></script>
+</head>
+<body>
+  <div class="container mt-5" id="myTicketsApp" v-cloak>
+    <h2 class="mb-4">🎟️ My Tickets</h2>
+
+    <div v-if="loading" class="text-center my-4">
+      <div class="spinner-border" role="status"></div>
+      <p>Loading your tickets...</p>
+    </div>
+
+    <div v-else>
+      <!-- Confirmed Tickets -->
+      <div class="mb-5">
+        <h4>✅ Confirmed Tickets</h4>
+        <div v-if="confirmedTickets.length" class="row">
+          <div class="col-md-6 mb-3" v-for="ticket in confirmedTickets" :key="ticket.ticketID">
+            <div class="card shadow-sm">
+              <div class="card-body">
+                <h5 class="card-title">{{ ticket.eventName }}</h5>
+                <p>
+                  <strong>Date:</strong> {{ formatDateTime(ticket.eventDateTime) }}<br>
+                  <strong>Seat:</strong> {{ ticket.seatNo }} ({{ ticket.seatCategory }})<br>
+                  <strong>Status:</strong> {{ ticket.status }}<br>
+                  <strong>Checked In:</strong> {{ ticket.isCheckedIn ? "Yes" : "No" }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p v-else class="text-muted">You have no confirmed tickets.</p>
+      </div>
+
+      <!-- Waitlisted Events -->
+      <div>
+        <h4>🕒 Waitlisted Events</h4>
+        <div v-if="waitlistedEvents.length" class="row">
+          <div class="col-md-6 mb-3" v-for="event in waitlistedEvents" :key="event.eventID + event.eventDateTime">
+            <div class="card border-success bg-light">
+              <div class="card-body">
+                <h5 class="card-title">Event ID: {{ event.eventID }}</h5>
+                <p>
+                  <strong>Date:</strong> {{ formatDateTime(event.eventDateTime) }}<br>
+                  <strong>Waitlisted On:</strong> {{ formatDateTime(event.waitlistDate) }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p v-else class="text-muted">You are not waitlisted for any events.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
