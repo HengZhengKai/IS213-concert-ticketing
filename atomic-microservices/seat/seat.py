@@ -38,24 +38,26 @@ except Exception as e:
 
 class Seat(db.Document):
     eventID = db.StringField(required=True)
+    eventDateID = db.StringField
+    eventDateTime = db.DateTimeField(required=True)
     seatNo = db.IntField(required=True)
     category = db.StringField()
     price = db.FloatField()
     status = db.StringField()
     
     # Make eventDateTime optional or remove it
-    eventDateTime = db.DateTimeField(required=False)
     
     meta = {
         'collection': 'Seat',  # Specify exact collection name
         'indexes': [
-            {'fields': ['eventID', 'seatNo'], 'unique': True}
+            {'fields': ['eventID', 'eventDateTime', 'seatNo'], 'unique': True}
         ]
     }
 
     def to_json(self):
         return {
             "eventID": self.eventID,
+            "eventDateID": self.eventDateID,
             "eventDateTime": self.eventDateTime,
             "seatNo": self.seatNo,
             "category": self.category,
@@ -99,9 +101,11 @@ def update_seat():
         "code": 200,
         "data": {
             "eventID": data['eventID'],
+            "eventDateID": data['eventDateID'],
+            "eventDateTime": data['eventDateTime'],
             "seatNo": data['seatNo'],
-            "category": category,
-            "price": price,
+            "category": data['category'],
+            "price": data['price'],
             "status": data["status"]
         }
     }), 200
