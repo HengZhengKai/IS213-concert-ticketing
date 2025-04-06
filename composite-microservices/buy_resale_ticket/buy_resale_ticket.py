@@ -1,12 +1,18 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import uuid
 import os, sys
 import requests
+import pika
+import json
 from invokes import invoke_http
 
 app = Flask(__name__)
 
 CORS(app)
+
+connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+channel = connection.channel()
 
 waitlist_URL = "http://localhost:5003/waitlist"
 ticket_URL = "http://localhost:5004/ticket"
@@ -37,23 +43,27 @@ def buy_resale_ticket(ticketID):
         }), 500
     
 def process_buy_resale_ticket(ticketID):
-    # Step 4. Update ticket reserved for user
+    # Step 4-5. Update ticket reserved for user
     print('\n-----Invoking ticket microservice-----')
     ticket_result = invoke_http(f"{ticket_URL}/{ticketID}", method='PUT', json={"status": "reseved"})
+
+    # Step 6-7: Get paymentID for refund
+    query = """
+    query GetPaymentId($ticketID: String!) {
+        paymentId(ticketID: $ticketID)
+    }
+    """
+    variables = {"ticketID": ticketID}
+    response = requests.post(f"{ticket_URL}/graphql", json={'query': query, 'variables': variables})
     
-    # Step 5. Return ticket reserved
-    print('ticket_result:', ticket_result)
+    if response.status_code == 200:
+        data = response.json()
+        if data.get("data") and "paymentId" in data["data"]:
+            paymentID = data["data"]["paymentId"]
 
-    # Step 6-8: Invoke payment service
+    # Step 8-9: Invoke payment service to refund charge
 
-# Execute this program if it is run as a main script (not by 'import')
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5101, debug=True)
-    # Notes for the parameters:
-    # - debug=True will reload the program automatically if a change is detected;
-    #   -- it in fact starts two instances of the same flask program,
-    #       and uses one of the instances to monitor the program changes;
-    # - host="0.0.0.0" allows the flask program to accept requests sent from any IP/host (in addition to localhost),
-    #   -- i.e., it gives permissions to hosts with any IP to access the flask program,
-    #   -- as long as the hosts can already reach the machine running the flask program along the network;
-    #   -- it doesn't mean to use http://0.0.0.0 to access the flask program.

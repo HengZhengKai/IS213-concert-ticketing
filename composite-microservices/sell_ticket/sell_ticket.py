@@ -76,8 +76,7 @@ def process_sell_ticket(ticket):
             "message": "Ticket update failure, sent for error handling."
         }
 
-
-    # Step 4. Query eventID and eventDateTime
+    # Step 4-5. Query eventID and eventDateTime
     print('\n-----Querying ticket microservice-----')
     query = """
     query {
@@ -90,7 +89,7 @@ def process_sell_ticket(ticket):
     variables = {"ticketID": ticket.ticketID}
     response = requests.post(ticket_microservice_url, json={'query': query, 'variables': variables})
     
-    # Step 5: Process event details
+    # Step 5: Process event details to call the right waitlist route
     event_data = response.json()
     
     if "data" in event_data and event_data["data"]["eventDetails"]:
