@@ -159,7 +159,7 @@ app.add_url_rule(
     view_func=GraphQLView.as_view('graphql', schema=schema, graphiql=True)
 )
 
-@app.route('/ticket/<string:eventID>/<string:eventDateTime>')
+@app.route('/tickets/<string:eventID>/<string:eventDateTime>')
 def get_available_tickets(eventID, eventDateTime):
     '''get tickets with available status'''
     available_tickets = Ticket.objects(eventID=eventID, eventDateTime=eventDateTime, status="available")
@@ -172,7 +172,21 @@ def get_available_tickets(eventID, eventDateTime):
 
     return jsonify({"code": 200, "data": tickets_data}), 200
 
-@app.route('/ticket/<string:ownerID>')
+@app.route('/ticket/<string:ticketID>', methods=['GET'])
+def get_ticket_by_id(ticketID):
+    '''Get ticket by ticketID'''
+    ticket = Ticket.objects(ticketID=ticketID).first()
+
+    if not ticket:
+        return jsonify({"code": 404, "message": "Ticket not found."}), 404
+
+    # Return the ticket data in the response
+    return jsonify({
+        "code": 200,
+        "data": ticket.to_json()
+    }), 200
+
+@app.route('/tickets/<string:ownerID>')
 def get_tickets_by_user(ownerID):
     '''get tickets under selected user'''
     tickets = Ticket.objects(ownerID=ownerID)
