@@ -43,6 +43,7 @@ class Ticket(db.Document): # tell flask what are the fields in your database
     ownerID = db.StringField()
     ownerName = db.StringField()
     eventID = db.StringField()
+    eventName = db.StringField()
     eventDateTime = db.DateTimeField(required=True)
     seatNo = db.IntField()
     seatCategory = db.StringField()
@@ -58,6 +59,7 @@ class Ticket(db.Document): # tell flask what are the fields in your database
             "ownerID": self.ownerID,
             "ownerName": self.ownerName,
             "eventID": self.eventID,
+            "eventName": self.eventName,
             "eventDateTime": self.eventDateTime,
             "seatNo": self.seatNo,
             "seatCategory": self.seatCategory,
@@ -205,6 +207,7 @@ def update_ticket(ticketID):
             "ownerID": updated_ticket.ownerID,
             "ownerName": updated_ticket.ownerName,
             "eventID": updated_ticket.eventID,
+            "eventName": updated_ticket.eventName,
             "eventDateTime": updated_ticket.eventDateTime,
             "seatNo": updated_ticket.seatNo,
             "seatCategory": updated_ticket.seatCategory,
@@ -233,7 +236,18 @@ def create_ticket(ticketID):
         data = request.get_json()
 
         # Validate input
-        required_fields = ["ownerID", "ownerName", "eventID", "eventDateTime", "seatNo", "seatCategory", "price", "status", "chargeID", "isCheckedIn"]
+        required_fields = ["ownerID",
+                           "ownerName",
+                           "eventID",
+                           "eventName",
+                           "eventDateTime",
+                           "seatNo",
+                           "seatCategory",
+                           "price",
+                           "resalePrice",
+                           "status",
+                           "chargeID",
+                           "isCheckedIn"] #ticketID in url
         if any(field not in data for field in required_fields):
             return jsonify({
                 "code": 400,
@@ -264,6 +278,8 @@ def create_ticket(ticketID):
             ownerID=data["ownerID"],
             ownerName=data["ownerName"],
             eventID=data["eventID"],
+            eventName=data["eventName"],
+            eventDateTime=data["eventDateTime"],            
             seatNo=data["seatNo"],
             seatCategory=data["seatCategory"],
             price=data["price"],
