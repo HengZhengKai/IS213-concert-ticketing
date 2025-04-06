@@ -157,7 +157,7 @@ def process_buy_ticket(userID, eventName, eventID, eventDate, seatNo, seatCatego
         transaction_result = invoke_http(f"{transaction_URL}", method="POST", json=transaction_data)
         transaction_code = transaction_result["code"]
 
-    # Step 10-11: Email buyer
+    # Step 10: Email buyer asynchronously
     print('\n-----Invoking email service through AMQP-----')
     
     payload = {
@@ -179,6 +179,7 @@ def process_buy_ticket(userID, eventName, eventID, eventDate, seatNo, seatCatego
         body=json.dumps(payload)
     )
 
+    # Step 11: Return
     return {
         "code": 201,
         "data": {
