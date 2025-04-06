@@ -55,7 +55,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             console.log('Sending request with body:', JSON.stringify(requestBody));
             
-            const response = await fetch('http://localhost:5000/login', {
+            const response = await fetch('http://localhost:5006/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

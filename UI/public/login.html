@@ -56,6 +56,18 @@
     color: red;
     font-size: 0.9rem;
   }
+  .credential-copy-icon {
+    cursor: pointer;
+    color: #6c757d; /* Bootstrap secondary color */
+    margin-left: 8px; /* Add some space */
+    font-size: 0.9em; /* Make it slightly smaller */
+  }
+  .credential-copy-icon:hover {
+    color: #000;
+  }
+  .input-wrapper {
+      position: relative;
+  }
 </style>
 <body>
   <!-- Header Area Start -->
@@ -83,15 +95,21 @@
       <div class="col-lg-6">
         <div class="login-form-container">
           <h2 class="text-center">Login</h2>
-          <h4 class="text-center">breannong@gmail.com</h4>
-          <h4 class="text-center">iloveesd@2025</h4>
+          <h4 class="text-center">
+            <span id="test-email">breannong@gmail.com</span>
+            <i class="fas fa-copy credential-copy-icon" onclick="copyCredentialText('test-email', this)" title="Copy Test Email"></i>
+          </h4>
+          <h4 class="text-center">
+             <span id="test-password">iloveesd@2025</span>
+             <i class="fas fa-copy credential-copy-icon" onclick="copyCredentialText('test-password', this)" title="Copy Test Password"></i>
+          </h4>
             
           <form id="loginForm">
-            <div class="mb-3">
+            <div class="mb-3 input-wrapper">
               <input type="email" id="email" class="form-control" placeholder="Email Address" required>
               <div id="emailError" class="error-message"></div>
             </div>
-            <div class="mb-3">
+            <div class="mb-3 input-wrapper">
               <input type="password" id="password" class="form-control" placeholder="Password" required>
               <div id="passwordError" class="error-message"></div>
             </div>
@@ -119,6 +137,28 @@
   <script src="assets/js/custom.js"></script>
 
   <script>
+    function copyCredentialText(elementId, iconElement) {
+        const textElement = document.getElementById(elementId);
+        if (!textElement) return;
+
+        const textToCopy = textElement.innerText;
+
+        // Use the Clipboard API
+        navigator.clipboard.writeText(textToCopy).then(() => {
+            // Success feedback (optional)
+            const originalIcon = iconElement.className;
+            iconElement.className = "fas fa-check credential-copy-icon"; // Change to checkmark
+            iconElement.title = "Copied!";
+            setTimeout(() => {
+                iconElement.className = originalIcon; // Revert after 1.5 seconds
+                iconElement.title = elementId === 'test-email' ? "Copy Test Email" : "Copy Test Password";
+            }, 1500);
+        }).catch(err => {
+            console.error('Failed to copy text: ', err);
+            alert('Failed to copy text.');
+        });
+    }
+
     function validateForm() {
       var email = document.getElementById("email").value;
       var emailError = document.getElementById("emailError");
