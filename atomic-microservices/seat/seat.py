@@ -38,24 +38,26 @@ except Exception as e:
 
 class Seat(db.Document):
     eventID = db.StringField(required=True)
+    eventDateID = db.StringField()
+    eventDateTime = db.DateTimeField(required=True)
     seatNo = db.IntField(required=True)
     category = db.StringField()
     price = db.FloatField()
     status = db.StringField()
     
     # Make eventDateTime optional or remove it
-    eventDateTime = db.DateTimeField(required=False)
     
     meta = {
         'collection': 'Seat',  # Specify exact collection name
         'indexes': [
-            {'fields': ['eventID', 'seatNo'], 'unique': True}
+            {'fields': ['eventID', 'eventDateTime', 'seatNo'], 'unique': True}
         ]
     }
 
     def to_json(self):
         return {
             "eventID": self.eventID,
+            "eventDateID": self.eventDateID,
             "eventDateTime": self.eventDateTime,
             "seatNo": self.seatNo,
             "category": self.category,
@@ -99,9 +101,11 @@ def update_seat():
         "code": 200,
         "data": {
             "eventID": data['eventID'],
+            "eventDateID": data['eventDateID'],
+            "eventDateTime": data['eventDateTime'],
             "seatNo": data['seatNo'],
-            "category": category,
-            "price": price,
+            "category": data['category'],
+            "price": data['price'],
             "status": data["status"]
         }
     }), 200
@@ -123,6 +127,28 @@ def get_all_seats():
             "code": 500,
             "message": f"Error retrieving seats: {str(e)}"
         }), 500
+
+@app.route('/seats/<string:eventID>/<path:eventDateTime>')
+def get_seats_for_event(eventID, eventDateTime):
+    try:
+        # Fix for URL-encoded '+' -> ' ' issue
+        eventDateTime = eventDateTime.replace(' ', '+')
+
+        dt = datetime.fromisoformat(eventDateTime)
+        dt = dt.replace(microsecond=0)
+
+        seats = Seat.objects(eventID=eventID, eventDateTime=dt)
+        return jsonify({
+            "code": 200,
+            "data": [seat.to_json() for seat in seats]
+        })
+    except Exception as e:
+        return jsonify({
+            "code": 500,
+            "message": f"Error retrieving seats: {str(e)}"
+        }), 500
+
+
 
 
 if __name__ == '__main__':

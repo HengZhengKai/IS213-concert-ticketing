@@ -16,7 +16,7 @@ channel = connection.channel()
 
 event_URL = "http://localhost:5001/event"
 seat_URL = "http://localhost:5002/seat"
-ticket_URL = "http://localhost:5004/ticket"
+ticket_URL = "http://localhost:5004/"
 transaction_URL = "http://localhost:5005/transaction"
 user_URL = "http://localhost:5006/user"
 payment_URL = "http://localhost:5007/payment"
@@ -31,7 +31,7 @@ def buy_ticket():
             required_fields = ["userID",
                                "eventName",
                                "eventID",
-                               "eventDate",
+                               "eventDateTime",
                                "seatNo",
                                "seatCategory",
                                "price",
@@ -44,13 +44,13 @@ def buy_ticket():
             userID = data["userID"]
             eventName = data["eventName"]
             eventID = data["eventID"]
-            eventDate = data["eventDate"]
+            eventDateTime = data["eventDateTime"]
             seatNo = data["seatNo"]
             seatCategory = data["seatCategory"]
             price = data["price"]
             paymentID = data["paymentID"]            
 
-            result = process_buy_ticket(userID, eventName, eventID, eventDate, seatNo, seatCategory, price, paymentID)
+            result = process_buy_ticket(userID, eventName, eventID, eventDateTime, seatNo, seatCategory, price, paymentID)
             return jsonify(result), result["code"]
 
         except Exception as e:
@@ -72,13 +72,13 @@ def buy_ticket():
         "message": "Invalid JSON input: " + str(request.get_data())
     }), 400
 
-def process_buy_ticket(userID, eventName, eventID, eventDate, seatNo, seatCategory, price, paymentID):
+def process_buy_ticket(userID, eventName, eventID, eventDateTime, seatNo, seatCategory, price, paymentID):
     # Step 2-3. Update event availableSeats
     print('\n-----Invoking event microservice-----')
-    event = invoke_http(f"{event_URL}/{eventID}/{eventDate}")
+    event = invoke_http(f"{event_URL}/{eventID}/{eventDateTime}")
     availableSeats = event["data"]["availableSeats"]
     newSeats = availableSeats - 1
-    event_result = invoke_http(f"{event_URL}/{eventID}/{eventDate}",method="PUT",
+    event_result = invoke_http(f"{event_URL}/{eventID}/{eventDateTime}",method="PUT",
                                json={"availableSeats":newSeats})
     
     # Check the event result; if a failure, do error handling.
@@ -114,7 +114,7 @@ def process_buy_ticket(userID, eventName, eventID, eventDate, seatNo, seatCatego
             "ownerName": userName,
             "eventID": eventID,
             "eventName": eventName,
-            "eventDateTime": eventDate,
+            "eventDateTime": eventDateTime,
             "seatNo": seatNo,
             "seatCategory": seatCategory,
             "price": price,
@@ -166,7 +166,7 @@ def process_buy_ticket(userID, eventName, eventID, eventDate, seatNo, seatCatego
         "ticket_id": ticketID,
         "event_id": eventID,
         "event_name": eventName,
-        "event_date": eventDate,
+        "event_date": eventDateTime,
         "seat_no": seatNo,
         "seat_category": seatCategory,
         "price": price
@@ -195,7 +195,7 @@ if __name__ == "__main__":
     # # Step 4-5. Update seat status
     # print('\n-----Invoking seat microservice-----')
     # seat_result = invoke_http(f"{seat_URL}", method="PUT",json = {"eventID":eventID,
-    #                                                               "eventDate":eventDate,
+    #                                                               "eventDateTime":eventDateTime,
     #                                                               "seatNo":seatNo,
     #                                                               "status":"booked"})
     

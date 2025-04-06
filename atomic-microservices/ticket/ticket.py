@@ -77,6 +77,10 @@ class EventDetails(graphene.ObjectType):
     eventID = graphene.String()
     eventDateTime = graphene.DateTime()
 
+class OwnerDetails(graphene.ObjectType):
+    ownerID = graphene.String()
+    ownerName = graphene.String()
+
 class Query(graphene.ObjectType):
     """
     GraphQL Query class to fetch ticket details.
@@ -102,11 +106,19 @@ class Query(graphene.ObjectType):
             eventDateTime
         }
     }
+
+    query {
+        ownerDetails(ticketID: "T001") {
+            ownerID
+            ownerName
+        }
+    }
     ```
     """
     payment_id = graphene.String(ticketID=graphene.String(required=True))
     is_checked_in = graphene.Boolean(ticketID=graphene.String(required=True))
     event_details = graphene.Field(EventDetails, ticketID=graphene.String(required=True))
+    owner_details = graphene.Field(EventDetails, ticketID=graphene.String(required=True))
 
     # Query for paymentID
     def resolve_payment_id(self, info, ticketID):
@@ -130,6 +142,14 @@ class Query(graphene.ObjectType):
             return EventDetails(eventID=ticket.eventID, eventDateTime=ticket.eventDateTime)
         return None 
     
+    # Query for ownerDetails
+    def resolve_owner_details(self, info, ticketID):
+        """Resolves owner details (ownerID and owner name) for the given ticketID."""
+        ticket = Ticket.objects(ticketID=ticketID).first()
+        if ticket:
+            return OwnerDetails(ownerID=ticket.ownerID, ownerName=ticket.ownerName)
+        return None 
+    
 # Define the schema
 schema = graphene.Schema(query=Query)
 
@@ -139,7 +159,7 @@ app.add_url_rule(
     view_func=GraphQLView.as_view('graphql', schema=schema, graphiql=True)
 )
 
-@app.route('/ticket/<string:eventID>/<string:eventDateTime>')
+@app.route('/tickets/<string:eventID>/<string:eventDateTime>')
 def get_available_tickets(eventID, eventDateTime):
     '''get tickets with available status'''
     available_tickets = Ticket.objects(eventID=eventID, eventDateTime=eventDateTime, status="available")
@@ -152,7 +172,21 @@ def get_available_tickets(eventID, eventDateTime):
 
     return jsonify({"code": 200, "data": tickets_data}), 200
 
-@app.route('/ticket/<string:ownerID>')
+@app.route('/ticket/<string:ticketID>', methods=['GET'])
+def get_ticket_by_id(ticketID):
+    '''Get ticket by ticketID'''
+    ticket = Ticket.objects(ticketID=ticketID).first()
+
+    if not ticket:
+        return jsonify({"code": 404, "message": "Ticket not found."}), 404
+
+    # Return the ticket data in the response
+    return jsonify({
+        "code": 200,
+        "data": ticket.to_json()
+    }), 200
+
+@app.route('/tickets/<string:ownerID>')
 def get_tickets_by_user(ownerID):
     '''get tickets under selected user'''
     tickets = Ticket.objects(ownerID=ownerID)

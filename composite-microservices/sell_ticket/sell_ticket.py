@@ -6,18 +6,12 @@ import pika
 import json
 from invokes import invoke_http
 
-import aiohttp
-import asyncio
-
 app = Flask(__name__)
 
 CORS(app)
 
-connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-channel = connection.channel()
-
 waitlist_URL = "http://localhost:5003/waitlist"
-ticket_URL = "http://localhost:5004/ticket"
+ticket_URL = "http://localhost:5004"
 user_URL = "http://localhost:5006/user"
 email_URL = "http://localhost:5008/email"
 celery_URL = "http://localhost:5009/send_waitlist_emails"
@@ -56,7 +50,7 @@ def sell_ticket(ticketID):
 def process_sell_ticket(ticket):
     # Step 2-3. Update ticket resalePrice and status
     print('\n-----Invoking ticket microservice-----')
-    ticket_result = invoke_http(f"{ticket_URL}/{ticket.ticketID}", method='PUT', json={"resalePrice": ticket.resalePrice, "status": "available"})
+    ticket_result = invoke_http(f"{ticket_URL}/ticket/{ticket.ticketID}", method='PUT', json={"resalePrice": ticket.resalePrice, "status": "available"})
 
     # Check the ticket result; if a failure, do error handling.
     code = ticket_result["code"]
