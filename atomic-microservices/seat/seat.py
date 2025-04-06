@@ -128,6 +128,28 @@ def get_all_seats():
             "message": f"Error retrieving seats: {str(e)}"
         }), 500
 
+@app.route('/seats/<string:eventID>/<path:eventDateTime>')
+def get_seats_for_event(eventID, eventDateTime):
+    try:
+        # Fix for URL-encoded '+' -> ' ' issue
+        eventDateTime = eventDateTime.replace(' ', '+')
+
+        dt = datetime.fromisoformat(eventDateTime)
+        dt = dt.replace(microsecond=0)
+
+        seats = Seat.objects(eventID=eventID, eventDateTime=dt)
+        return jsonify({
+            "code": 200,
+            "data": [seat.to_json() for seat in seats]
+        })
+    except Exception as e:
+        return jsonify({
+            "code": 500,
+            "message": f"Error retrieving seats: {str(e)}"
+        }), 500
+
+
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5002, debug=True)
