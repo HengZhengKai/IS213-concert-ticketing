@@ -139,10 +139,10 @@ def get_available_tickets(eventID, eventDateTime):
 
     return jsonify({"code": 200, "data": tickets_data}), 200
 
-@app.route('/ticket/<string:userID>')
-def get_tickets_by_user(userID):
+@app.route('/ticket/<string:ownerID>')
+def get_tickets_by_user(ownerID):
     '''get tickets under selected user'''
-    tickets = Ticket.objects(userID=userID)
+    tickets = Ticket.objects(ownerID=ownerID)
 
     if not tickets:
         return jsonify({"code": 404, "message": "User has no tickets."}), 404
