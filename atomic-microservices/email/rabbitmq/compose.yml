@@ -46,7 +46,7 @@ services:
   ####################################
   email_service:
     build:
-      context: ../email
+      context: ../email_service
       dockerfile: Dockerfile
     restart: always
     ports:

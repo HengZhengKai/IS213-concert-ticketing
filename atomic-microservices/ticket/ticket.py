@@ -41,6 +41,7 @@ except Exception as e:
 class Ticket(db.Document): # tell flask what are the fields in your database
     ticketID = db.StringField(primary_key = True)
     ownerID = db.StringField()
+    ownerName = db.StringField()
     eventID = db.StringField()
     eventDateTime = db.DateTimeField(required=True)
     seatNo = db.IntField()
@@ -55,6 +56,7 @@ class Ticket(db.Document): # tell flask what are the fields in your database
         return {
             "ticketID": self.ticketID,
             "ownerID": self.ownerID,
+            "ownerName": self.ownerName,
             "eventID": self.eventID,
             "eventDateTime": self.eventDateTime,
             "seatNo": self.seatNo,
