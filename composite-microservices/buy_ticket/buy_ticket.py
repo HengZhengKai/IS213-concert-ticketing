@@ -84,7 +84,6 @@ def process_buy_ticket(userID, eventName, eventID, eventDate, seatNo, seatCatego
     # Check the event result; if a failure, do error handling.
     code = event_result["code"]
     if code not in range(200, 300):
-        pass
         # # Inform the error microservice
         # print('\n\n-----Invoking error microservice as order fails-----')
         # invoke_http(error_URL, method="POST", json=ticket_result)
