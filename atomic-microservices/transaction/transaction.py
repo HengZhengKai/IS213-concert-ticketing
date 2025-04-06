@@ -42,7 +42,7 @@ class Transaction(db.Document): # tell flask what are the fields in your databas
     type = db.StringField(choices=["purchase", "refund"], required=True)  # Restrict values
     userID = db.StringField()
     ticketID = db.StringField()
-    chargeID = db.StringField()
+    paymentID = db.StringField()
     amount = db.FloatField(min_value=0.0)
     transactionDate = db.DateTimeField()
 
@@ -52,7 +52,7 @@ class Transaction(db.Document): # tell flask what are the fields in your databas
             "type": self.type,
             "userID": self.userID,
             "ticketID": self.ticketID,
-            "chargeID": self.chargeID,
+            "paymentID": self.paymentID,
             "amount": self.amount,
             "transactionDate": self.transactionDate.isoformat() if self.transactionDate else None
         }
@@ -61,7 +61,12 @@ class Transaction(db.Document): # tell flask what are the fields in your databas
 @app.route('/transaction', methods=['POST'])
 def create_transaction():
     data = request.get_json()
-    required_fields = ["transactionID", "type", "userID", "ticketID", "chargeID", "amount"]
+    required_fields = ["transactionID",
+                       "type",
+                       "userID",
+                       "ticketID",
+                       "paymentID",
+                       "amount"]
     
     if not all(field in data for field in required_fields):
         return jsonify({"code": 400, "message": "Missing required fields."}), 400
@@ -77,7 +82,7 @@ def create_transaction():
         type=data["type"],
         userID=data["userID"],
         ticketID=data["ticketID"],
-        chargeID=data["chargeID"],
+        paymentID=data["paymentID"],
         amount=data["amount"],
         transactionDate=datetime.now()
     )
@@ -90,7 +95,7 @@ def create_transaction():
             "type": transaction.type,
             "userID": transaction.userID,
             "ticketID": transaction.ticketID,
-            "chargeID": transaction.chargeID,
+            "paymentID": transaction.paymentID,
             "amount": transaction.amount,
             "transactionDate": transaction.transactionDate.strftime('%Y-%m-%d %H:%M:%S')
         }
