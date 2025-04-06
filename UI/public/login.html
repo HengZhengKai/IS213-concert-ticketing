@@ -71,6 +71,7 @@
                 </span>
               </h1>
             </a>
+          </nav>
         </div>
       </div>
     </div>
@@ -82,18 +83,23 @@
       <div class="col-lg-6">
         <div class="login-form-container">
           <h2 class="text-center">Login</h2>
-          <form id="loginForm" method="post" onsubmit="return validateForm()">
+          <h4 class="text-center">breannong@gmail.com</h4>
+          <h4 class="text-center">iloveesd@2025</h4>
+            
+          <form id="loginForm">
             <div class="mb-3">
               <input type="email" id="email" class="form-control" placeholder="Email Address" required>
               <div id="emailError" class="error-message"></div>
             </div>
             <div class="mb-3">
               <input type="password" id="password" class="form-control" placeholder="Password" required>
+              <div id="passwordError" class="error-message"></div>
             </div>
             <div class="mb-3 text-end">
               <a href="forgot_password.html">Forgot Password?</a>
             </div>
             <button type="submit" class="btn btn-primary login-btn">Log In</button>
+            <div id="loginError" class="error-message mt-2 text-center"></div>
           </form>
           <div class="mt-4 text-center">
             <p>Don't have an account? <a href="signup.html">Sign up here</a></p>
@@ -109,47 +115,7 @@
   <script src="assets/js/isotope.min.js"></script>
   <script src="assets/js/owl-carousel.js"></script>
   <script src="assets/js/counter.js"></script>
-  <!-- <script src="assets/js/login.js"></script> -->
-  <!-- Replace the login.js script tag with your new request handling code -->
-<script>
-  // Login form submission
-  document.getElementById('loginForm').onsubmit = async function(e) {
-    e.preventDefault();
-
-    // Get email and password values
-    var email = document.getElementById("email").value;
-    var password = document.getElementById("password").value;
-
-    try {
-      // Send login credentials to the backend
-      const response = await fetch('http://localhost:5000/login', {  // Adjust the URL if needed
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        // Handle successful login (e.g., store the JWT token)
-        localStorage.setItem('token', result.token);
-        window.location.href = '/dashboard.html';  // Redirect to a different page after login
-      } else {
-        // Show error message
-        alert(result.message || 'Login failed');
-      }
-    } catch (error) {
-      // Handle any network or other errors
-      console.error('Error during login:', error);
-      alert('Something went wrong. Please try again.');
-    }
-  };
-</script>
-
-
-
+  <script src="static/login.js"></script>
   <script src="assets/js/custom.js"></script>
 
   <script>

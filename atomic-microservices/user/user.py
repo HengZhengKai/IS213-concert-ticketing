@@ -42,7 +42,8 @@ class User(db.Document): # tell flask what are the fields in your database
     age = db.IntField()
     gender = db.StringField()
     email = db.StringField()
-    phoneNum = db.StringField() 
+    phoneNum = db.StringField()
+    password = db.StringField()  # Add password field
 
     meta = {
         'collection': 'User' 
@@ -55,10 +56,11 @@ class User(db.Document): # tell flask what are the fields in your database
             "age": self.age,
             "gender": self.gender,
             "email": self.email,
-            "phoneNum": self.phoneNum  
+            "phoneNum": self.phoneNum,
+            "password": self.password  # Include password in response
         }
 
-@app.route("/user/<string:userID>")
+@app.route("/user/id/<string:userID>")
 def get_user(userID):
     user = User.objects(_id=userID).first()  # MongoEngine query
 
@@ -66,7 +68,7 @@ def get_user(userID):
         return jsonify(
             {
                 "code": 200,
-                "data": user.to_json()  # Use `to_json()` method of user class
+                "data": user.to_json()
             }
         )
     
@@ -77,24 +79,31 @@ def get_user(userID):
         }
     ), 404
 
-@app.route("/user/<string:email>")
+@app.route("/user/email/<string:email>")
 def get_user_by_email(email):
-    user = User.objects(email=email).first()  # MongoEngine query
-
-    if user:
-        return jsonify(
-            {
+    try:
+        logger.info(f"Looking up user by email: {email}")
+        user = User.objects(email=email).first()
+        
+        if user:
+            logger.info(f"Found user: {user.to_json()}")
+            return jsonify({
                 "code": 200,
-                "data": user.to_json()  # Use `to_json()` method of user class
-            }
-        )
-    
-    return jsonify(
-        {
+                "data": user.to_json()
+            })
+        
+        logger.info(f"No user found with email: {email}")
+        return jsonify({
             "code": 404,
             "message": "User not found."
-        }
-    ), 404
+        }), 404
+        
+    except Exception as e:
+        logger.error(f"Error finding user by email: {e}")
+        return jsonify({
+            "code": 500,
+            "message": f"Error finding user: {str(e)}"
+        }), 500
 
 #displays the seats in json 
 #link to see json http://localhost:5006/users
