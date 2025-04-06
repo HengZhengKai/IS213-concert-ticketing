@@ -2,6 +2,8 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import os, sys
 import requests
+import pika
+import json
 from invokes import invoke_http
 
 import aiohttp
@@ -10,6 +12,9 @@ import asyncio
 app = Flask(__name__)
 
 CORS(app)
+
+connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
+channel = connection.channel()
 
 waitlist_URL = "http://localhost:5003/waitlist"
 ticket_URL = "http://localhost:5004/ticket"
