@@ -8,56 +8,109 @@
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
   <style>
     .seat {
-      width: 50px;
-      height: 50px;
-      margin: 5px;
+      width: 40px;
+      height: 40px;
+      margin: 4px;
       border-radius: 5px;
       display: inline-flex;
       justify-content: center;
       align-items: center;
-      cursor: pointer;
+      font-size: 0.9rem;
       font-weight: bold;
+      cursor: pointer;
     }
     .available { background-color: #28a745; color: white; }
     .reserved { background-color: #ffc107; color: black; cursor: not-allowed; }
     .taken { background-color: #dc3545; color: white; cursor: not-allowed; }
-    .selected { background-color: #007bff !important; color: white; }
+    .selected { background-color: #007bff !important; color: white !important; }
+
+    .category-section {
+      margin-bottom: 2rem;
+    }
+
+    .screen {
+      width: 100%;
+      height: 30px;
+      background-color: #e0e0e0;
+      text-align: center;
+      line-height: 30px;
+      border-radius: 5px;
+      font-weight: bold;
+      margin: 0 auto 20px;
+    }
+
+    .fixed-summary {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #f8f9fa;
+      border-top: 1px solid #dee2e6;
+      padding: 10px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 1000;
+    }
+
+    .fixed-summary span.badge {
+      margin-right: 5px;
+    }
   </style>
 </head>
 <body>
-  <div id="app" class="container mt-5">
-    <h2 class="mb-4">Choose Your Seat</h2>
+  <div id="app" class="container py-5">
+    <h2 class="mb-4 text-center">Choose Your Seat</h2>
+
+    <div class="screen">Stage</div>
+
     <div v-if="loading">Loading seats...</div>
+
     <div v-else>
-      <div v-for="category in categories" :key="category" class="mb-4">
-        <h4>Category {{ category }}</h4>
-        <div class="d-flex flex-wrap">
+      <div v-for="category in categories" :key="category" class="category-section">
+        <h4 class="text-center mb-3">Category {{ category }}</h4>
+        <div :style="seatRowStyle(category)">
           <div
             v-for="seat in seatsByCategory[category]"
             :key="seat.seatNo"
             class="seat"
-            :class="[seat.status, selectedSeat && selectedSeat.seatNo === seat.seatNo ? 'selected' : '']"
+            :class="[seat.status, isSelected(seat) ? 'selected' : '']"
             @click="selectSeat(seat)"
           >
             {{ seat.seatNo }}
           </div>
         </div>
+        <p v-if="categoryFull[category]" class="text-danger text-center mt-2">
+          All seats in Category {{ category }} are filled.
+        </p>
       </div>
+      <!-- Error Banner at Top -->
+        <div v-if="selectionError" class="alert alert-danger text-center fixed-top" style="z-index: 1050;">
+            {{ selectionError }}
+        </div>
+  
+    </div>
 
-      <div class="mt-4 text-center">
-        <div v-if="selectedSeat">
-          <h5>You selected seat #{{ selectedSeat.seatNo }} (Category {{ selectedSeat.category }})</h5>
-          <p><strong>Price:</strong> ${{ selectedSeat.price }}</p>
-          <button class="btn btn-primary">Checkout</button>
-        </div>
-        <div v-else>
-          <p class="text-muted">Please select a seat to see the price.</p>
-        </div>
+    <!-- Fixed bottom summary -->
+    <div v-if="selectedSeats.length" class="fixed-summary">
+      <div>
+        <strong>Selected Seats:</strong>
+        <span
+          v-for="seat in selectedSeats"
+          :key="seat.category + seat.seatNo"
+          class="badge bg-primary"
+        >
+          {{ seat.category }}{{ seat.seatNo }}
+        </span>
+      </div>
+      <div>
+        <strong>Total:</strong> ${{ totalSelectedPrice() }}
+        <button class="btn btn-success ms-3">Checkout</button>
       </div>
     </div>
   </div>
 
-  <!-- Link the JS after Vue is loaded -->
+  <!-- JS after Vue loaded -->
   <script src="assets/js/choose_seat.js"></script>
 </body>
 </html>
