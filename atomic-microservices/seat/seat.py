@@ -38,7 +38,7 @@ except Exception as e:
 
 class Seat(db.Document):
     eventID = db.StringField(required=True)
-    eventDateID = db.StringField
+    eventDateID = db.StringField()
     eventDateTime = db.DateTimeField(required=True)
     seatNo = db.IntField(required=True)
     category = db.StringField()
