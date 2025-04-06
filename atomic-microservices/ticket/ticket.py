@@ -53,6 +53,8 @@ class Ticket(db.Document): # tell flask what are the fields in your database
     paymentID = db.StringField() # can be "" for mock tickets
     isCheckedIn = db.BooleanField()
 
+    meta = {'collection': 'Ticket'} 
+
     def to_json(self):
         return {
             "ticketID": self.ticketID,
@@ -87,11 +89,18 @@ class Query(graphene.ObjectType):
     Example Queries:
     ```
     query {
-        paymentId(ticketID: "12345")
+        paymentId(ticketID: "T001")
     }
 
     query {
-        isCheckedIn(ticketID: "12345")
+        isCheckedIn(ticketID: "T001")
+    }
+
+    query {
+        eventDetails(ticketID: "T001") {
+            eventID
+            eventDateTime
+        }
     }
     ```
     """
@@ -302,6 +311,24 @@ def create_ticket(ticketID):
             "data": {"ticketID": ticketID},
             "message": "An error occurred creating the ticket."
         }), 500
+
+@app.route('/ticket', methods=['GET'])
+def get_all_tickets():
+    try:
+        tickets = Ticket.objects()
+        return jsonify({
+            "code": 200,
+            "data": {
+                "tickets": [ticket.to_json() for ticket in tickets]
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            "code": 500,
+            "message": f"Error retrieving tickets: {str(e)}"
+        }), 500
+
+
 
 
 if __name__ == '__main__':
