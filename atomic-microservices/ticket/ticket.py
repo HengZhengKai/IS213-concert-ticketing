@@ -75,6 +75,7 @@ class Ticket(db.Document): # tell flask what are the fields in your database
 # Define GraphQL Queries
 class EventDetails(graphene.ObjectType):
     eventID = graphene.String()
+    eventName = graphene.String()
     eventDateTime = graphene.DateTime()
 
 class OwnerDetails(graphene.ObjectType):
@@ -103,6 +104,7 @@ class Query(graphene.ObjectType):
     query {
         eventDetails(ticketID: "T001") {
             eventID
+            eventName
             eventDateTime
         }
     }
@@ -136,10 +138,10 @@ class Query(graphene.ObjectType):
 
     # Query for eventDetails
     def resolve_event_details(self, info, ticketID):
-        """Resolves event details (event name and event date) for the given ticketID."""
+        """Resolves event details (event id, event name and event date) for the given ticketID."""
         ticket = Ticket.objects(ticketID=ticketID).first()
         if ticket:
-            return EventDetails(eventID=ticket.eventID, eventDateTime=ticket.eventDateTime)
+            return EventDetails(eventID=ticket.eventID, eventName=ticket.eventName, eventDateTime=ticket.eventDateTime)
         return None 
     
     # Query for ownerDetails
