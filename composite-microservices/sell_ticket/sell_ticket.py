@@ -76,6 +76,7 @@ def process_sell_ticket(ticket):
     query {
         eventDetails(ticketID: $ticketID) {
             eventID
+            eventName
             eventDateTime
         }
     }
@@ -88,12 +89,11 @@ def process_sell_ticket(ticket):
     
     if "data" in event_data and event_data["data"]["eventDetails"]:
         eventID = event_data["data"]["eventDetails"]["eventID"]
+        eventName = event_data["data"]["eventDetails"]["eventName"]
         eventDateTime = event_data["data"]["eventDetails"]["eventDateTime"]
     else:
         print("Error: Could not retrieve event details")
         return {"error": "Event details not found"}
-
-    print(f"Event ID: {eventID}, Event DateTime: {eventDateTime}")
 
     # Step 6-7. Get waitlist users
     print('\n-----Invoking waitlist microservice-----')
@@ -107,7 +107,7 @@ def process_sell_ticket(ticket):
     payload = {
         "waitlist_users": waitlist_users["data"],
         "ticket": {
-            "event_name": ticket["event_name"],
+            "event_name": eventName,
             "event_date": eventDateTime,
             "expiration_time": "15 minutes"
         }
