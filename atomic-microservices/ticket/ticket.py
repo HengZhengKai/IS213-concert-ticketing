@@ -194,7 +194,10 @@ def get_available_tickets(eventID, eventDateTime):
     # Return the available tickets in the response
     tickets_data = [ticket.to_json() for ticket in available_tickets]
 
-    return jsonify({"code": 200, "data": tickets_data}), 200
+    return jsonify({"code": 200,
+                    "data": {
+                        "tickets": tickets_data
+                    }}), 200
 
 @app.route('/ticket/<string:ticketID>', methods=['GET'])
 def get_ticket_by_id(ticketID):
@@ -221,7 +224,10 @@ def get_tickets_by_user(ownerID):
     # Return the available tickets in the response
     tickets_data = [ticket.to_json() for ticket in tickets]
 
-    return jsonify({"code": 200, "data": tickets_data}), 200
+    return jsonify({"code": 200,
+                    "data": {
+                        "tickets":tickets_data
+                    }}), 200
 
 @app.route('/ticket/<string:ticketID>', methods=['PUT'])
 def update_ticket(ticketID):
