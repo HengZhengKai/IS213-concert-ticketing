@@ -1,0 +1,44 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: celery-email-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: celery-email-service
+  template:
+    metadata:
+      labels:
+        app: celery-email-service
+    spec:
+      containers:
+      - name: ccelery-email-service
+        image: is213-concert-ticketing-celery-email-service
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5009
+        command: ["python", "./task.py"]
+        env:
+          - name: RABBITMQ_HOST
+            value: rabbitmq
+          - name: RABBITMQ_PORT
+            value: "5672"
+          - name: RABBITMQ_USER
+            value: guest
+          - name: RABBITMQ_PASS
+            value: guest
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: celery-email-service
+spec:
+  selector:
+    app: celery-email-service
+  ports:
+  - port: 5009
+    targetPort: 5009
+  type: ClusterIP

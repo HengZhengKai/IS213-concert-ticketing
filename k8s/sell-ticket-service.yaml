@@ -1,0 +1,35 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sell-ticket-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sell-ticket-service
+  template:
+    metadata:
+      labels:
+        app: sell-ticket-service
+    spec:
+      containers:
+      - name: sell-ticket-service
+        image: is213-concert-ticketing-sell-ticket-service
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5101
+        command: ["python", "./sell_ticket.py"]
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sell-ticket-service
+spec:
+  selector:
+    app: sell-ticket-service
+  ports:
+  - port: 5101
+    targetPort: 5101
+  type: ClusterIP

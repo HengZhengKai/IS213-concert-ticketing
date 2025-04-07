@@ -1,0 +1,35 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: waitlist-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: waitlist-service
+  template:
+    metadata:
+      labels:
+        app: waitlist-service
+    spec:
+      containers:
+      - name: waitlist-service
+        image: is213-concert-ticketing-waitlist-service
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5003
+        command: ["python", "./waitlist.py"]
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: waitlist-service
+spec:
+  selector:
+    app: waitlist-service
+  ports:
+  - port: 5003
+    targetPort: 5003
+  type: ClusterIP

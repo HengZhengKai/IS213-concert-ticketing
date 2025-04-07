@@ -1,0 +1,35 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: buy-resale-ticket-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: buy-resale-ticket-service
+  template:
+    metadata:
+      labels:
+        app: buy-resale-ticket-service
+    spec:
+      containers:
+      - name: buy-resale-ticket-service
+        image: is213-concert-ticketing-buy-resale-ticket-service
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5102
+        command: ["python", "./buy_resale_ticket.py"]
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: buy-resale-ticket-service
+spec:
+  selector:
+    app: buy-resale-ticket-service
+  ports:
+  - port: 5102
+    targetPort: 5102
+  type: ClusterIP

@@ -1,0 +1,35 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: seat-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: seat-service
+  template:
+    metadata:
+      labels:
+        app: seat-service
+    spec:
+      containers:
+      - name: seat-service
+        image: is213-concert-ticketing-seat-service
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5002
+        command: ["python", "./seat.py"]
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: seat-service
+spec:
+  selector:
+    app: seat-service
+  ports:
+  - port: 5002
+    targetPort: 5002
+  type: ClusterIP

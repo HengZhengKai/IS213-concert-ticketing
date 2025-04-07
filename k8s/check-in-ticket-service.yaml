@@ -1,0 +1,35 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: check-in-ticket-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: check-in-ticket-service
+  template:
+    metadata:
+      labels:
+        app: check-in-ticket-service
+    spec:
+      containers:
+      - name: check-in-ticket-service
+        image: is213-concert-ticketing-check-in-ticket-service
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5103
+        command: ["python", "./check_in_ticket.py"]
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: check-in-ticket-service
+spec:
+  selector:
+    app: check-in-ticket-service
+  ports:
+  - port: 5103
+    targetPort: 5103
+  type: ClusterIP

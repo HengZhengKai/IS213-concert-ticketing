@@ -1,0 +1,44 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: email-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: email-service
+  template:
+    metadata:
+      labels:
+        app: email-service
+    spec:
+      containers:
+      - name: email-service
+        image: is213-concert-ticketing-email-service
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5008
+        command: ["python", "./email-service.py"]
+        env:
+          - name: RABBITMQ_HOST
+            value: rabbitmq
+          - name: RABBITMQ_PORT
+            value: "5672"
+          - name: RABBITMQ_USER
+            value: guest
+          - name: RABBITMQ_PASS
+            value: guest
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: email-service
+spec:
+  selector:
+    app: email-service
+  ports:
+  - port: 5008
+    targetPort: 5008
+  type: ClusterIP

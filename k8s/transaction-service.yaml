@@ -1,0 +1,35 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: transaction-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: transaction-service
+  template:
+    metadata:
+      labels:
+        app: transaction-service
+    spec:
+      containers:
+      - name: transaction-service
+        image: is213-concert-ticketing-transaction-service
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5005
+        command: ["python", "./transaction.py"]
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: transaction-service
+spec:
+  selector:
+    app: transaction-service
+  ports:
+  - port: 5005
+    targetPort: 5005
+  type: ClusterIP

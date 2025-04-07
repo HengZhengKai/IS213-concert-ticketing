@@ -1,0 +1,35 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: payment-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: payment-service
+  template:
+    metadata:
+      labels:
+        app: payment-service
+    spec:
+      containers:
+      - name: payment-service
+        image: is213-concert-ticketing-payment-service
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 5007
+        command: ["python", "./payment.py"]
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: payment-service
+spec:
+  selector:
+    app: payment-service
+  ports:
+  - port: 5007
+    targetPort: 5007
+  type: ClusterIP

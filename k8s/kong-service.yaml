@@ -1,0 +1,61 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kong
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kong
+  template:
+    metadata:
+      labels:
+        app: kong
+    spec:
+      containers:
+        - name: kong
+          image: kong:latest
+          ports:
+            - containerPort: 8000
+            - containerPort: 8443
+            - containerPort: 8001
+          env:
+            - name: KONG_DATABASE
+              value: "off"
+            - name: KONG_DECLARATIVE_CONFIG
+              value: /usr/local/kong/declarative/kong.yml
+          volumeMounts:
+            - name: kong-config-volume
+              mountPath: /usr/local/kong/declarative/kong.yml
+              subPath: kong.yml
+          readinessProbe:
+            httpGet:
+              path: /status
+              port: 8001
+            initialDelaySeconds: 10
+            periodSeconds: 10
+      volumes:
+        - name: kong-config-volume
+          configMap:
+            name: kong-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kong-proxy
+spec:
+  type: LoadBalancer
+  selector:
+    app: kong
+  ports:
+    - name: http
+      port: 80
+      targetPort: 8000
+    - name: https
+      port: 443
+      targetPort: 8443
+    - name: admin
+      port: 8001
+      targetPort: 8001
