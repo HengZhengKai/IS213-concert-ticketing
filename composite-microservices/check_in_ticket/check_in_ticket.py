@@ -7,6 +7,11 @@ import requests
 from io import BytesIO
 from invokes import invoke_http
 
+import socket
+
+hostname = socket.gethostname()
+local_ip = socket.gethostbyname(hostname)
+
 app = Flask(__name__)
 
 CORS(app)
@@ -34,9 +39,12 @@ def generate_qr(ticketID):
     if is_ticket_checked_in(ticketID) == True:
         return jsonify({"error": "Ticket already checked in"}), 400
     
+    # Use current local IP to construct full scan URL
+    scan_url = f"http://{local_ip}:5103/scanqr/{ticketID}"
+
     # Generate QR code
     qr = qrcode.QRCode(version=1, box_size=10, border=5)
-    qr.add_data(ticketID)
+    qr.add_data(scan_url)
     qr.make(fit=True)
 
     img = qr.make_image(fill="black", back_color="white")
