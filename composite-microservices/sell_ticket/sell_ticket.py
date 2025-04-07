@@ -55,10 +55,16 @@ def process_sell_ticket(ticket):
     # Check the ticket result; if a failure, do error handling.
     code = ticket_result["code"]
     if code not in range(200, 300):
-        return {
-            "code": 500,
-            "message": "Ticket update failure",
-        }
+        if code == 400:
+            return {
+                "code": 400,
+                "message": "Resale price cannot be higher than the original price or the previous resale price."
+            }
+        else:
+            return {
+                "code": 500,
+                "message": "Ticket update failure",
+            }
 
     # Step 4-5. Query eventID and eventDateTime
     print('\n-----Querying ticket microservice-----')
