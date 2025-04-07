@@ -33,6 +33,7 @@ services:
       - name: ticket_service_route
         paths:
           - /ticket
+          - /tickets
           - /graphql
         strip_path: false
 
