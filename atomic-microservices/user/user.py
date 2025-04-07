@@ -110,7 +110,7 @@ def login():
         return jsonify({"message": f"An error occurred during login: {str(e)}"}), 500
 # --- END OF LOGIN ROUTE ---
 
-@app.route("/user/id/<string:userID>")
+@app.route("/user/<string:userID>")
 def get_user(userID):
     user = User.objects(_id=userID).first() 
     if user:
