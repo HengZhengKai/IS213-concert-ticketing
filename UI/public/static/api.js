@@ -33,11 +33,11 @@ async function fetchEvents(retries = 3, delayMs = 500) {
                 let formattedDate = 'No date available';
                 if (event.dates && event.dates.length > 0 && event.dates[0].eventDateTime) {
                     try {
-                        const dateObj = new Date(event.dates[0].eventDateTime);
-                        formattedDate = dateObj.toLocaleDateString('en-SG', {
+                    const dateObj = new Date(event.dates[0].eventDateTime);
+                    formattedDate = dateObj.toLocaleDateString('en-SG', {
                             year: 'numeric', month: 'long', day: 'numeric',
                             hour: '2-digit', minute: '2-digit'
-                        });
+                    });
                     } catch (e) {
                         console.error("Date formatting error:", e);
                     }
@@ -80,7 +80,7 @@ async function fetchEvents(retries = 3, delayMs = 500) {
             });
         } else {
             console.error("Invalid data format received from event service:", data);
-            throw new Error("Invalid data format received"); 
+            throw new Error("Invalid data format received");
         }
     } catch (error) {
         console.error(`Error fetching events (Attempt ${4 - retries}):`, error);
@@ -91,11 +91,11 @@ async function fetchEvents(retries = 3, delayMs = 500) {
         } else {
             console.error("Max retries reached. Returning fallback data.");
             // Return hardcoded events as fallback only after all retries fail
-            return [
-                { id: "E001", name: "Wrong Event", date: "2025-10-05", venue: "The Arena, Singapore" },
-                { id: "E002", name: "Kpop Stars Live", date: "2025-06-15", venue: "Marina Bay Sands Expo" }
-            ];
-        }
+        return [
+            { id: "E001", name: "Wrong Event", date: "2025-10-05", venue: "The Arena, Singapore" },
+            { id: "E002", name: "Kpop Stars Live", date: "2025-06-15", venue: "Marina Bay Sands Expo" }
+        ];
+    }
     }
 }
 
