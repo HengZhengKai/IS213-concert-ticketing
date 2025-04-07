@@ -7,6 +7,7 @@ import mongoengine as db
 from dotenv import load_dotenv
 load_dotenv()
 import requests
+import stripe
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -103,7 +104,7 @@ def make_refund():
         except Exception as e:
             return jsonify({"error": str(e)}), 500
         
-import stripe
+
 
 @app.route('/verify-payment')
 def verify_payment():
