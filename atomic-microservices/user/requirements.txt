@@ -2,5 +2,5 @@ Flask==3.1.0
 Flask-Cors==5.0.0
 mongoengine==0.29.1
 python-dotenv==1.0.0
-PyJWT
+jwt==1.3.1
 pika==1.3.2
