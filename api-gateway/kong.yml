@@ -8,8 +8,6 @@ services:
       - name: event_service_route
         paths:
           - /event
-          - /event/:eventID
-          - /event/:eventID/:eventDateTime
         strip_path: false
 
   - name: seat_service
@@ -17,6 +15,7 @@ services:
     routes:
       - name: seat_service_route
         paths:
+          - /seat
           - /seats
         strip_path: false          
 
@@ -25,7 +24,7 @@ services:
     routes:
       - name: waitlist_service_route
         paths:
-          - /waitlist/:eventID/:eventDateTime
+          - /waitlist
         strip_path: false
 
   - name: ticket_service
@@ -33,9 +32,8 @@ services:
     routes:
       - name: ticket_service_route
         paths:
-          - /ticket/:ticketID
-          - /ticket/:userID
-          - /ticket/:eventID/:eventDateTime
+          - /ticket
+          - /graphql
         strip_path: false
 
   - name: transaction_service
@@ -51,8 +49,8 @@ services:
     routes:
       - name: user_service_route
         paths:
-          - /user:userID
-          - /user:email
+          - /user
+          - /users
         strip_path: false
 
   - name: payment_service
@@ -60,8 +58,7 @@ services:
     routes:
       - name: payment_service_route
         paths:
-          - /makepayment
-          - /makerefund
+          - /start-checkout
         strip_path: false
 
   - name: email_service
@@ -71,6 +68,14 @@ services:
         paths:
           - /email
         strip_path: false
+
+  - name: celery_email_service
+    url: http://celery_email_service:5009
+    routes:
+      - name: celery_email_service_route
+        paths:
+          - /send_waitlist_emails
+        strip_path: false  
 
   - name: buy_ticket_service
     url: http://buy_ticket_service:5100
@@ -101,8 +106,8 @@ services:
     routes:
       - name: check_in_ticket_service_route
         paths:
-          - /generateqr/:ticketID
-          - /scanqr/:ticketID
+          - /generateqr
+          - /scanqr
         strip_path: false
 
 plugins:
