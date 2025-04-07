@@ -1,40 +1,76 @@
 const express = require('express');
-const mongoose = require('mongoose');
-const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
-const User = require('./user');
+const axios = require('axios');
 
 const app = express();
 const PORT = 5000;
 
 // Middleware
-app.use(cors()); // allow frontend to talk to backend
-app.use(express.json()); // parse JSON request bodies
+const corsOptions = {
+  origin: ['http://localhost', 'http://127.0.0.1', 'http://localhost:5500'],
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
 
-// MongoDB connection
-mongoose.connect('mongodb+srv://breannong2023:7rgWH1qw3rgneVNZ@ticketing-db.qqamb.mongodb.net/', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(() => console.log('MongoDB connected successfully'))
-.catch(err => console.error('MongoDB connection error:', err));
+app.use(cors(corsOptions));
+app.use(express.json());
 
 // Login route
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    const user = await User.findOne({ email });
-    if (!user) return res.status(400).json({ message: 'Invalid email or password' });
+    console.log('Incoming request body:', req.body);
 
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: 'Invalid email or password' });
+    // Get user from Python service using the correct endpoint
+    const userResponse = await axios.get(`http://localhost:5006/user/email/${email}`);
+    
+    if (userResponse.data.code === 404) {
+      console.log('User not found:', email);
+      return res.status(400).json({ message: 'Invalid email or password' });
+    }
 
-    const token = jwt.sign({ userId: user._id }, 'your_jwt_secret', { expiresIn: '1h' });
-    res.json({ token });
+    const user = userResponse.data.data;
+    console.log('User found:', user);
+
+    // Compare the passwords (remove trailing commas from stored password)
+    const storedPassword = user.password.replace(/,+$/, '');
+    console.log('Comparing passwords:');
+    console.log('Input password:', password);
+    console.log('Stored password:', storedPassword);
+
+    if (password === storedPassword) {
+      console.log('Password match successful');
+      const token = jwt.sign({ userId: user.userID }, 'your_jwt_secret', { expiresIn: '1h' });
+      
+      // Create a sanitized user object (removing sensitive data)
+      const userData = {
+        userID: user.userID,
+        name: user.name,
+        email: user.email,
+        age: user.age,
+        gender: user.gender,
+        phoneNum: user.phoneNum
+      };
+
+      return res.json({ 
+        token, 
+        message: 'Login successful',
+        user: userData
+      });
+    } else {
+      console.log('Password mismatch');
+      return res.status(400).json({ message: 'Invalid email or password' });
+    }
+    
   } catch (err) {
-    res.status(500).json({ message: 'Server error' });
+    console.error('Server error:', err);
+    if (err.response) {
+      console.error('Response data:', err.response.data);
+    }
+    res.status(500).json({ message: 'Server error', error: err.message });
   }
 });
 

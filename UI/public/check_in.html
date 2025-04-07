@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>Check-in | Concerts</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <!-- Bootstrap core CSS -->
+  <link href="vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Additional CSS Files -->
+  <link rel="stylesheet" href="assets/css/fontawesome.css">
+  <link rel="stylesheet" href="assets/css/templatemo-villa-agency.css">
+  <link rel="stylesheet" href="assets/css/owl.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+  <link rel="stylesheet" href="https://unpkg.com/swiper@7/swiper-bundle.min.css" />
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <!-- Commented out unused scripts -->
+  <!-- <script defer src="static/api.js"></script> -->
+  <!-- <script defer src="static/main.js"></script> -->
+
+  <style>
+    /* Added Ticket Styles */
+    .ticket-container {
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      margin: 20px 0;
+      padding: 20px;
+    }
+    .ticket-header {
+      border-bottom: 1px solid #eee;
+      margin-bottom: 15px;
+      padding-bottom: 15px;
+    }
+    .ticket-details {
+      margin: 10px 0;
+    }
+    .qr-container {
+      text-align: center;
+      margin: 20px 0;
+      padding: 20px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+    .qr-code {
+      max-width: 250px;
+      margin: auto;
+    }
+    .check-in-btn {
+      background-color: #dc3545;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    .check-in-btn:hover {
+      background-color: #c82333;
+    }
+    .checked-in {
+      background-color: #28a745;
+    }
+    .checked-in:hover {
+      background-color: #218838;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- Header Area Start -->
+  <header class="header-area header-sticky">
+    <div class="container">
+      <div class="row">
+        <div class="col-12">
+          <nav class="main-nav">
+            <a href="index.html" class="logo">
+              <h1>
+                <span>
+                  <inline>Events</inline>
+                </span>
+              </h1>
+            </a>
+            <ul class="nav">
+              <li><a href="index.html">Buy Ticket</a></li>
+              <li><a href="check_in.html" class="active">Check In</a></li>
+              <li><a href="resale_ticket.html">Resale</a></li>
+              <li id="profileLink">
+                <a href="profile.html" id="profileLinkRedir">
+                  <i class="fa fa-user" id="profileLinkImg"></i>
+                  <span id="profileLinkText">Profile</span>
+                </a>
+              </li>
+            </ul>
+            <a class="menu-trigger"><span>Menu</span></a>
+          </nav>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Area - Vue App Root -->
+  <div id="checkInApp" class="container mt-5 pt-5"> 
+    <div class="row">
+      <div class="col-12">
+        <h2 class="text-center mb-4">My Tickets</h2>
+        
+        <!-- Loading State -->
+        <div v-if="loading" class="text-center">
+          <div class="spinner-border" role="status">
+            <span class="visually-hidden">Loading...</span>
+          </div>
+          <p>Loading tickets...</p>
+        </div>
+
+        <!-- Error Message -->
+        <div v-else-if="error" class="alert alert-danger text-center" role="alert">
+          {{ error }}
+        </div>
+
+        <!-- Tickets List (using v-for) -->
+        <div v-else-if="tickets.length > 0" id="ticketsListVue">
+           <!-- Loop through tickets -->
+           <div v-for="ticket in tickets" :key="ticket.ticketID" class="ticket-container">
+             <div class="row align-items-center"> 
+               <div class="col-12">
+                 <div class="ticket-header">
+                   <h4 class="concert-name">{{ ticket.eventName }}</h4>
+                 </div>
+                 <div class="ticket-details">
+                   <p><strong>Date:</strong> <span class="concert-date">{{ formatDateTime(ticket.eventDateTime) }}</span></p>
+                   <p><strong>Seat:</strong> <span class="seat-number">{{ ticket.seatNo }}</span></p>
+                   <p><strong>Status:</strong> <span class="check-in-status">{{ ticket.isCheckedIn ? 'Checked In' : 'Not Checked In' }}</span></p>
+                 </div>
+                 <button class="btn check-in-btn" :data-ticket-id="ticket.ticketID" :disabled="ticket.isCheckedIn" :class="{ 'checked-in': ticket.isCheckedIn }">
+                   {{ ticket.isCheckedIn ? 'Checked In' : 'Check In' }}
+                 </button>
+               </div>
+             </div>
+           </div>
+        </div>
+        
+         <!-- No Tickets Message -->
+        <div v-else class="text-center">
+          <p>You have no booked tickets.</p>
+        </div>
+
+        <!-- QR Code Modal (remains the same, controlled by JS/Vue later) -->
+        <div class="modal fade" id="qrModal" tabindex="-1" aria-labelledby="qrModalLabel" aria-hidden="true">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+              <div class="modal-header">
+                <h5 class="modal-title" id="qrModalLabel">Check-in QR Code</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div class="modal-body">
+                <div class="qr-container">
+                  <div id="qrCode" class="qr-code"></div>
+                  <p class="mt-3" id="qrStatus">Waiting for scan...</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="vendor/jquery/jquery.min.js"></script>
+  <script src="vendor/bootstrap/js/bootstrap.min.js"></script>
+  <script src="static/login.js"></script>
+  <script defer src="static/check_in_vue.js"></script>
+  <script src="assets/js/isotope.min.js"></script>
+  <script src="assets/js/owl-carousel.js"></script>
+  <script src="assets/js/counter.js"></script>
+  <script src="assets/js/custom.js"></script>
+</body>
+</html>

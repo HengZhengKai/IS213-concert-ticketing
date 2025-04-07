@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>Tickets | Concerts</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <!-- Bootstrap core CSS -->
+  <link href="vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Additional CSS Files -->
+  <link rel="stylesheet" href="assets/css/fontawesome.css">
+  <link rel="stylesheet" href="assets/css/templatemo-villa-agency.css">
+  <link rel="stylesheet" href="assets/css/owl.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+  <link rel="stylesheet" href="https://unpkg.com/swiper@7/swiper-bundle.min.css" />
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+  <!-- Import your JavaScript file -->
+  <script defer src="assets/js/my_tickets.js"></script>
+</head>
+<body>
+   <!-- Header Area Start -->
+   <header class="header-area header-sticky">
+    <div class="container">
+      <div class="row">
+        <div class="col-12">
+          <nav class="main-nav">
+            <a href="index.html" class="logo">
+              <h1>
+                <span>
+                  <inline>Events</inline>
+                </span>
+              </h1>
+            </a>
+            <ul class="nav">
+              <li><a href="index.html" >Buy Ticket</a></li>
+              <li><a href="check_in.html">Check In</a></li>
+              <li><a href="resale_ticket.html">Resale</a></li>
+              <li><a href="#" id="myTicketsLink"  class="active">My Tickets</a></li>
+              <li id="profileLink">
+                <a href="profile.html" id="profileLinkRedir">
+                  <i class="fa fa-user" id="profileLinkImg"></i>
+                  <span id="profileLinkText">Profile</span>
+                </a>
+              </li>
+            </ul>
+            <a class="menu-trigger"><span>Menu</span></a>
+          </nav>
+        </div>
+      </div>
+    </div>
+  </header>
+  <div class="container mt-5" id="myTicketsApp" v-cloak>
+    
+    <h2 class="mb-4">🎟️ My Tickets</h2>
+
+    <div v-if="loading" class="text-center my-4">
+      <div class="spinner-border" role="status"></div>
+      <p>Loading your tickets...</p>
+    </div>
+
+    <div v-else>
+      <!-- Confirmed Tickets -->
+      <div class="mb-5">
+        <h4>✅ Confirmed Tickets</h4>
+        <div v-if="confirmedTickets.length" class="row">
+          <div class="col-md-6 mb-3" v-for="ticket in confirmedTickets" :key="ticket.ticketID">
+            <div class="card shadow-sm">
+              <div class="card-body">
+                <h5 class="card-title">{{ ticket.eventName }}</h5>
+                <p>
+                  <strong>Date:</strong> {{ formatDateTime(ticket.eventDateTime) }}<br>
+                  <strong>Seat:</strong> {{ ticket.seatNo }} ({{ ticket.seatCategory }})<br>
+                  <strong>Status:</strong> {{ ticket.status }}<br>
+                  <strong>Checked In:</strong> {{ ticket.isCheckedIn ? "Yes" : "No" }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p v-else class="text-muted">You have no confirmed tickets.</p>
+      </div>
+
+      <!-- Waitlisted Events -->
+      <div>
+        <h4>🕒 Waitlisted Events</h4>
+        <div v-if="waitlistedEvents.length" class="row">
+          <div class="col-md-6 mb-3" v-for="event in waitlistedEvents" :key="event.eventID + event.eventDateTime">
+            <div class="card border-success bg-light">
+              <div class="card-body">
+                <h5 class="card-title">Event ID: {{ event.eventID }}</h5>
+                <p>
+                  <strong>Date:</strong> {{ formatDateTime(event.eventDateTime) }}<br>
+                  <strong>Waitlisted On:</strong> {{ formatDateTime(event.waitlistDate) }}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+        <p v-else class="text-muted">You are not waitlisted for any events.</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

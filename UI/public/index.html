@@ -31,6 +31,12 @@
     border-radius: 8px;
     /* Rounded corners for a polished look */
   }
+  .waitlist-bg {
+  background-color: rgba(198, 239, 206, 0.9); /* light green with 90% opacity */
+  border: 1px solid #b2d8b2;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
   .event-details-container h6 {
     font-size: 1.4rem;
     /* Increase font size for the heading */
@@ -84,6 +90,7 @@
               <li><a href="buy_ticket.html"  class="active">Buy Ticket</a></li>
               <li><a href="check_in.html">Check In</a></li>
               <li><a href="resale_ticket.html">Resale</a></li>
+              <li><a href="#" id="myTicketsLink">My Tickets</a></li>
               <li id="profileLink">
                 <a href="profile.html" id="profileLinkRedir">
                   <i class="fa fa-user" id="profileLinkImg"></i>
@@ -176,7 +183,7 @@
                   <a 
                   v-if="date.availableSeats > 0"
                   class="btn btn-primary btn-sm"
-                  :href="`choose_seat.html?eventID=${selectedEvent.id}&eventDateTime=${date.eventDateID}`">
+                  :href="`choose_seat.html?eventID=${selectedEvent.id}&eventDateTime=${date.eventDateTime}`">
                   Choose Seat
                 </a>
                 
@@ -196,8 +203,6 @@
             <p><strong>Location:</strong> {{ selectedEvent.place }} (Postal Code: {{ selectedEvent.postal }})</p>
           </div>
           <div class="modal-footer">
-            <button type="button" class="btn btn-primary" @click="googleCreateEvent">Add to Calendar</button>
-            <button type="button" class="btn btn-success" @click="openSignupModal">Sign up</button>
             <button type="button" class="btn btn-danger" data-bs-dismiss="modal" @click="closeEventModal">Close</button>
           </div>
         </div>
@@ -297,6 +302,41 @@
         </div>
       </div>
     </div>
+    <!-- Waitlist Success Modal -->
+
+<!-- Waitlist Success Modal -->
+<div class="modal fade" id="waitlistModal" tabindex="-1" aria-labelledby="waitlistModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content waitlist-bg">
+      <div class="modal-header">
+        <h5 class="modal-title" id="waitlistModalLabel">Waitlist Confirmation</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p id="waitlistSuccessMessage">You have joined the waitlist!</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- Already in Waitlist Modal -->
+<div class="modal fade" id="alreadyInWaitlistModal" tabindex="-1" aria-labelledby="alreadyInWaitlistLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content waitlist-bg">
+      <div class="modal-header">
+        <h5 class="modal-title" id="alreadyInWaitlistLabel">Waitlist Info</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>You are already in the waitlist for this event.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
     <!-- Custom Login Prompt Modal for Events -->
     <div class="modal fade" id="loginPromptModalEvents" tabindex="-1" aria-labelledby="loginPromptLabelEvents"
       aria-hidden="true">
@@ -369,5 +409,16 @@
   <script src="assets/js/owl-carousel.js"></script>
   <script src="assets/js/counter.js"></script>
   <script src="assets/js/custom.js"></script>
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const user = sessionStorage.getItem("user");
+      const link = document.getElementById("myTicketsLink");
+  
+      if (user && link) {
+        link.href = "my_tickets.html";
+      }
+    });
+  </script>
+  
 </body>
 </html>

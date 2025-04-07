@@ -43,6 +43,7 @@ class Ticket(db.Document): # tell flask what are the fields in your database
     ownerID = db.StringField()
     ownerName = db.StringField()
     eventID = db.StringField()
+    eventName = db.StringField()
     eventDateTime = db.DateTimeField(required=True)
     seatNo = db.IntField()
     seatCategory = db.StringField()
@@ -52,12 +53,15 @@ class Ticket(db.Document): # tell flask what are the fields in your database
     paymentID = db.StringField() # can be "" for mock tickets
     isCheckedIn = db.BooleanField()
 
+    meta = {'collection': 'Ticket'} 
+
     def to_json(self):
         return {
             "ticketID": self.ticketID,
             "ownerID": self.ownerID,
             "ownerName": self.ownerName,
             "eventID": self.eventID,
+            "eventName": self.eventName,
             "eventDateTime": self.eventDateTime,
             "seatNo": self.seatNo,
             "seatCategory": self.seatCategory,
@@ -71,7 +75,12 @@ class Ticket(db.Document): # tell flask what are the fields in your database
 # Define GraphQL Queries
 class EventDetails(graphene.ObjectType):
     eventID = graphene.String()
+    eventName = graphene.String()
     eventDateTime = graphene.DateTime()
+
+class OwnerDetails(graphene.ObjectType):
+    ownerID = graphene.String()
+    ownerName = graphene.String()
 
 class Query(graphene.ObjectType):
     """
@@ -85,17 +94,33 @@ class Query(graphene.ObjectType):
     Example Queries:
     ```
     query {
-        paymentId(ticketID: "12345")
+        paymentId(ticketID: "T001")
     }
 
     query {
-        isCheckedIn(ticketID: "12345")
+        isCheckedIn(ticketID: "T001")
+    }
+
+    query {
+        eventDetails(ticketID: "T001") {
+            eventID
+            eventName
+            eventDateTime
+        }
+    }
+
+    query {
+        ownerDetails(ticketID: "T001") {
+            ownerID
+            ownerName
+        }
     }
     ```
     """
     payment_id = graphene.String(ticketID=graphene.String(required=True))
     is_checked_in = graphene.Boolean(ticketID=graphene.String(required=True))
     event_details = graphene.Field(EventDetails, ticketID=graphene.String(required=True))
+    owner_details = graphene.Field(EventDetails, ticketID=graphene.String(required=True))
 
     # Query for paymentID
     def resolve_payment_id(self, info, ticketID):
@@ -113,10 +138,18 @@ class Query(graphene.ObjectType):
 
     # Query for eventDetails
     def resolve_event_details(self, info, ticketID):
-        """Resolves event details (event name and event date) for the given ticketID."""
+        """Resolves event details (event id, event name and event date) for the given ticketID."""
         ticket = Ticket.objects(ticketID=ticketID).first()
         if ticket:
-            return EventDetails(eventID=ticket.eventID, eventDateTime=ticket.eventDateTime)
+            return EventDetails(eventID=ticket.eventID, eventName=ticket.eventName, eventDateTime=ticket.eventDateTime)
+        return None 
+    
+    # Query for ownerDetails
+    def resolve_owner_details(self, info, ticketID):
+        """Resolves owner details (ownerID and owner name) for the given ticketID."""
+        ticket = Ticket.objects(ticketID=ticketID).first()
+        if ticket:
+            return OwnerDetails(ownerID=ticket.ownerID, ownerName=ticket.ownerName)
         return None 
     
 # Define the schema
@@ -128,7 +161,7 @@ app.add_url_rule(
     view_func=GraphQLView.as_view('graphql', schema=schema, graphiql=True)
 )
 
-@app.route('/ticket/<string:eventID>/<string:eventDateTime>')
+@app.route('/tickets/<string:eventID>/<string:eventDateTime>')
 def get_available_tickets(eventID, eventDateTime):
     '''get tickets with available status'''
     available_tickets = Ticket.objects(eventID=eventID, eventDateTime=eventDateTime, status="available")
@@ -141,7 +174,21 @@ def get_available_tickets(eventID, eventDateTime):
 
     return jsonify({"code": 200, "data": tickets_data}), 200
 
-@app.route('/ticket/<string:ownerID>')
+@app.route('/ticket/<string:ticketID>', methods=['GET'])
+def get_ticket_by_id(ticketID):
+    '''Get ticket by ticketID'''
+    ticket = Ticket.objects(ticketID=ticketID).first()
+
+    if not ticket:
+        return jsonify({"code": 404, "message": "Ticket not found."}), 404
+
+    # Return the ticket data in the response
+    return jsonify({
+        "code": 200,
+        "data": ticket.to_json()
+    }), 200
+
+@app.route('/tickets/<string:ownerID>')
 def get_tickets_by_user(ownerID):
     '''get tickets under selected user'''
     tickets = Ticket.objects(ownerID=ownerID)
@@ -203,7 +250,9 @@ def update_ticket(ticketID):
         "data": {
             "ticketID": updated_ticket.ticketID,
             "ownerID": updated_ticket.ownerID,
+            "ownerName": updated_ticket.ownerName,
             "eventID": updated_ticket.eventID,
+            "eventName": updated_ticket.eventName,
             "eventDateTime": updated_ticket.eventDateTime,
             "seatNo": updated_ticket.seatNo,
             "seatCategory": updated_ticket.seatCategory,
@@ -232,7 +281,18 @@ def create_ticket(ticketID):
         data = request.get_json()
 
         # Validate input
-        required_fields = ["ownerID", "eventID", "eventDateTime", "seatNo", "seatCategory", "price", "status", "chargeID", "isCheckedIn"]
+        required_fields = ["ownerID",
+                           "ownerName",
+                           "eventID",
+                           "eventName",
+                           "eventDateTime",
+                           "seatNo",
+                           "seatCategory",
+                           "price",
+                           "resalePrice",
+                           "status",
+                           "chargeID",
+                           "isCheckedIn"] #ticketID in url
         if any(field not in data for field in required_fields):
             return jsonify({
                 "code": 400,
@@ -261,7 +321,10 @@ def create_ticket(ticketID):
         ticket = Ticket(
             ticketID=ticketID,
             ownerID=data["ownerID"],
+            ownerName=data["ownerName"],
             eventID=data["eventID"],
+            eventName=data["eventName"],
+            eventDateTime=data["eventDateTime"],            
             seatNo=data["seatNo"],
             seatCategory=data["seatCategory"],
             price=data["price"],
@@ -284,6 +347,24 @@ def create_ticket(ticketID):
             "data": {"ticketID": ticketID},
             "message": "An error occurred creating the ticket."
         }), 500
+
+@app.route('/ticket', methods=['GET'])
+def get_all_tickets():
+    try:
+        tickets = Ticket.objects()
+        return jsonify({
+            "code": 200,
+            "data": {
+                "tickets": [ticket.to_json() for ticket in tickets]
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            "code": 500,
+            "message": f"Error retrieving tickets: {str(e)}"
+        }), 500
+
+
 
 
 if __name__ == '__main__':

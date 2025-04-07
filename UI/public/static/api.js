@@ -1,18 +1,27 @@
-async function fetchEvents() {
-    console.log("Fetching events...");
+// Helper function for delaying execution
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
+async function fetchEvents(retries = 3, delayMs = 500) {
+    console.log(`Fetching events... Attempt ${4 - retries}`);
 
     try {
-        // Note: Using the correct endpoint from your Kong API Gateway
-        let res = await fetch("http://127.0.0.1:5001/event");
-        let data = await res.json();
-        console.log("Received events:", data);
+        // NOTE: Changed URL to target event_service directly based on docker-compose
+        const response = await fetch("http://localhost:5001/event"); 
         
-        if (data.code === 200 && data.data && data.data.events) {
+        if (!response.ok) {
+            // Throw an error for bad HTTP status codes
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        console.log("Received events data structure:", data);
+        
+        // Assuming the event service returns { "code": 200, "data": { "events": [...] } }
+        if (data.code === 200 && data.data && Array.isArray(data.data.events)) {
+            console.log("Events fetched successfully:", data.data.events);
             // Transform the data to match the format expected by the frontend
             return data.data.events.map(event => {
                 // Check both possible field names
-                console.log("Raw event data:", event);
-                console.log("Mapped id:", event.eventID);
                 const rawImageData = event.imageBase64 || event.displayPicture || '';
                 
                 // Properly format the image data with prefix if needed
@@ -22,21 +31,19 @@ async function fetchEvents() {
                 
                 // Format the date more nicely for display
                 let formattedDate = 'No date available';
-                if (event.dates && event.dates.length > 0) {
+                if (event.dates && event.dates.length > 0 && event.dates[0].eventDateTime) {
                     try {
-                    const dateObj = new Date(event.dates[0].eventDateTime);
-                    formattedDate = dateObj.toLocaleDateString('en-SG', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit'
-                    });
+                        const dateObj = new Date(event.dates[0].eventDateTime);
+                        formattedDate = dateObj.toLocaleDateString('en-SG', {
+                            year: 'numeric', month: 'long', day: 'numeric',
+                            hour: '2-digit', minute: '2-digit'
+                        });
                     } catch (e) {
                         console.error("Date formatting error:", e);
                     }
+                } else {
+                    console.warn("Event missing dates or eventDateTime:", event.eventID);
                 }
-                
                 
                 const allDates = [];
                 if (event.dates && Array.isArray(event.dates)) {
@@ -44,13 +51,10 @@ async function fetchEvents() {
                         try {
                             const dateObj = new Date(date.eventDateTime);
                             allDates.push({
-                                eventDateID: date.eventDateID,  // Add this line
+                                eventDateTime: date.eventDateTime, 
                                 formatted: dateObj.toLocaleDateString('en-SG', {
-                                    year: 'numeric',
-                                    month: 'long',
-                                    day: 'numeric',
-                                    hour: '2-digit',
-                                    minute: '2-digit'
+                                    year: 'numeric', month: 'long', day: 'numeric',
+                                    hour: '2-digit', minute: '2-digit'
                                 }),
                                 availableSeats: date.availableSeats
                             });
@@ -61,16 +65,13 @@ async function fetchEvents() {
                 }
 
                 return {
-                    id: event.eventID,
-                    name: event.eventName,
+                    id: event.eventID || 'N/A',
+                    name: event.eventName || 'Unknown Event',
                     imageBase64: imageData,
-                    venue: event.venue,
-                    description: event.description,
-                    // date: event.dates && event.dates.length > 0 ? 
-                    //     new Date(event.dates[0].eventDateTime).toISOString().split('T')[0] : 
-                    //     'No date available',
+                    venue: event.venue || 'Unknown Venue',
+                    description: event.description || 'No description',
                     date: formattedDate,
-                    totalSeats: event.totalSeats,
+                    totalSeats: event.totalSeats || 0,
                     availableSeats: event.dates && event.dates.length > 0 ? 
                                     event.dates[0].availableSeats : 
                                     'Unknown',
@@ -78,19 +79,25 @@ async function fetchEvents() {
                 };
             });
         } else {
-            throw new Error("Invalid data format received");
+            console.error("Invalid data format received from event service:", data);
+            throw new Error("Invalid data format received"); 
         }
     } catch (error) {
-        console.error("Error fetching events:", error);
-        // Return hardcoded events as fallback
-        return [
-            { id: "E001", name: "Wrong Event", date: "2025-10-05", venue: "The Arena, Singapore" },
-            { id: "E002", name: "Kpop Stars Live", date: "2025-06-15", venue: "Marina Bay Sands Expo" }
-        ];
+        console.error(`Error fetching events (Attempt ${4 - retries}):`, error);
+        if (retries > 1) {
+            console.log(`Retrying in ${delayMs}ms...`);
+            await delay(delayMs);
+            return fetchEvents(retries - 1, delayMs); // Recursive call to retry
+        } else {
+            console.error("Max retries reached. Returning fallback data.");
+            // Return hardcoded events as fallback only after all retries fail
+            return [
+                { id: "E001", name: "Wrong Event", date: "2025-10-05", venue: "The Arena, Singapore" },
+                { id: "E002", name: "Kpop Stars Live", date: "2025-06-15", venue: "Marina Bay Sands Expo" }
+            ];
+        }
     }
-    
 }
-
 
 async function fetchAvailableTickets() {
     let res = await fetch("http://localhost:5001/ticket");
