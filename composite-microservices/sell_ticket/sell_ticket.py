@@ -105,7 +105,7 @@ def process_sell_ticket(ticket):
     
     # Step 8: Email all waitlist users
     payload = {
-        "waitlist_users": waitlist_users["data"],
+        "waitlist_users": waitlist_users["waitlist"],
         "ticket": {
             "event_id": eventID,
             "event_name": eventName,

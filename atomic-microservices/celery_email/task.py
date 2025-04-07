@@ -56,7 +56,7 @@ def send_waitlist_messages():
     ticket = request.json["ticket"]
     
     for user in waitlist_users:
-        send_message.delay(user, ticket)  # Send task to Celery workers
+        send_message.delay(user["userID"], ticket)  # Send task to Celery workers
     
     return jsonify({"message": "Messages are being sent"}), 200
 

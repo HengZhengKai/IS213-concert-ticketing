@@ -69,6 +69,7 @@ def get_waitlist(eventID, eventDateTime):
     return jsonify({
         "status": 200,
         "eventID": eventID,
+        "eventDateTime": eventDateTime,
         "waitlist": [{"userID": w.userID, "waitlistDate": w.waitlistDate.isoformat()} for w in event_waitlist]
     }), 200
 
