@@ -87,7 +87,6 @@ def add_to_waitlist(eventID, eventDateTime):
     if Waitlist.objects(eventID=eventID, eventDateTime=eventDateTime, userID=userID).first():
         return jsonify({
             "code": 409,
-            "data": {"eventID": eventID, "userID": userID},
             "message": "User already in waitlist."
         }), 409
     
