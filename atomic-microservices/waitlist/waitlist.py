@@ -67,10 +67,12 @@ def get_waitlist(eventID, eventDateTime):
         return jsonify({"code": 404, "message": "No users on waitlist."}), 404
     
     return jsonify({
-        "status": 200,
-        "eventID": eventID,
-        "eventDateTime": eventDateTime,
-        "waitlist": [{"userID": w.userID, "waitlistDate": w.waitlistDate.isoformat()} for w in event_waitlist]
+        "code": 200,
+        "data": {
+            "eventID": eventID,
+            "eventDateTime": eventDateTime,
+            "waitlist": [{"userID": w.userID, "waitlistDate": w.waitlistDate.isoformat()} for w in event_waitlist]
+        }
     }), 200
 
 @app.route('/waitlist/<string:eventID>/<string:eventDateTime>', methods=['POST'])
