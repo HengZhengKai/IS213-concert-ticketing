@@ -46,6 +46,8 @@ class Transaction(db.Document): # tell flask what are the fields in your databas
     amount = db.FloatField(min_value=0.0)
     transactionDate = db.DateTimeField()
 
+    meta = {'collection': 'Transaction'} 
+
     def to_json(self):
         return {
            "transactionID": self.transactionID,
