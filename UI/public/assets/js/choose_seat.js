@@ -175,7 +175,7 @@ const app = Vue.createApp({
           },
           body: JSON.stringify({
             mode: "payment",
-            success_url: "http://localhost:8080/index.html",
+            success_url: "http://localhost:8080/my_tickets.html?session_id={CHECKOUT_SESSION_ID}",
             cancel_url: "https://httpbin.org/status/400",
             currency: "sgd", 
             product_name: productName,

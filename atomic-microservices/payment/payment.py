@@ -1,6 +1,5 @@
 from flask import Flask, jsonify, request, redirect
 from flask_cors import CORS
-#import stripe
 import os
 import logging
 import urllib.parse
@@ -9,7 +8,6 @@ from dotenv import load_dotenv
 load_dotenv()
 import requests
 
-# Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -68,6 +66,70 @@ def start_checkout():
       import traceback
       traceback.print_exc()
       return jsonify({"error": str(e)}), 500
+
+@app.route('/makerefund', methods=['POST'])
+def make_refund():
+        try:
+            # Get Stripe secret key from environment variable
+            stripe_key = os.getenv("STRIPE_SECRET_KEY")
+
+            # Get refund request data
+            req_data = request.get_json()
+            payment_intent = req_data.get("payment_intent")
+            reason = req_data.get("reason", "")  # Optional
+
+            if not payment_intent:
+                return jsonify({"error": "Missing required field: payment_intent"}), 400
+
+            refund_url = "https://personal-5nnqipga.outsystemscloud.com/Stripe/rest/payments/refund"
+            
+            headers = {
+                "Content-Type": "application/json",
+                "Authorization": f"Bearer {stripe_key}"
+            }
+
+            payload = {
+                "payment_intent": payment_intent,
+                "reason": reason
+            }
+
+            response = requests.post(refund_url, json=payload, headers=headers)
+
+            if response.status_code == 200:
+                return jsonify({"success": True, "refund": response.json()}), 200
+            else:
+                return jsonify({"error": "Refund failed", "details": response.text}), response.status_code
+
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+        
+import stripe
+
+@app.route('/verify-payment')
+def verify_payment():
+    session_id = request.args.get("session_id")
+    stripe.api_key = os.getenv("STRIPE_SECRET_KEY")  # Your actual Stripe secret key
+
+    try:
+        # 1. Get session
+        session = stripe.checkout.Session.retrieve(session_id)
+
+        # 2. Get payment intent
+        payment_intent_id = session.payment_intent
+        payment_intent = stripe.PaymentIntent.retrieve(payment_intent_id)
+
+        # 3. Return everything needed
+        return jsonify({
+            # "status": session.payment_status,
+            # "email": session.customer_email,
+            # "amount_total": session.amount_total,
+            # "currency": payment_intent.currency,
+            # "payment_method": payment_intent.payment_method,
+             "payment_intent_id": payment_intent_id
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 if __name__ == '__main__':
@@ -182,41 +244,4 @@ if __name__ == '__main__':
 
 #     except Exception as e:
 #         return jsonify({"error": str(e)}), 500
-    
-
-
-# @app.route('/makerefund', methods=['POST'])
-# def make_refund():
-#         try:
-#             # Get Stripe secret key from environment variable
-#             stripe_key = os.getenv("STRIPE_SECRET_KEY")
-
-#             # Get refund request data
-#             req_data = request.get_json()
-#             payment_intent = req_data.get("payment_intent")
-#             reason = req_data.get("reason", "")  # Optional
-
-#             if not payment_intent:
-#                 return jsonify({"error": "Missing required field: payment_intent"}), 400
-
-#             refund_url = "https://personal-5nnqipga.outsystemscloud.com/Stripe/rest/payments/refund"
-            
-#             headers = {
-#                 "Content-Type": "application/json",
-#                 "Authorization": f"Bearer {stripe_key}"
-#             }
-
-#             payload = {
-#                 "payment_intent": payment_intent,
-#                 "reason": reason
-#             }
-
-#             response = requests.post(refund_url, json=payload, headers=headers)
-
-#             if response.status_code == 200:
-#                 return jsonify({"success": True, "refund": response.json()}), 200
-#             else:
-#                 return jsonify({"error": "Refund failed", "details": response.text}), response.status_code
-
-#         except Exception as e:
-#             return jsonify({"error": str(e)}), 500
+  

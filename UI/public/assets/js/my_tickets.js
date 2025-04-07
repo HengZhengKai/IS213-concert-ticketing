@@ -17,7 +17,25 @@ const myTicketsApp = Vue.createApp({
   
       const user = JSON.parse(sessionUser);
       const ownerID = user.email; // ✅ Use email as the ownerID
-  
+      
+      const sessionId = new URLSearchParams(window.location.search).get("session_id");
+  if (sessionId) {
+    // Call your Flask backend to verify and possibly store the booking
+    fetch(`http://localhost:5007/verify-payment?session_id=${sessionId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.payment_intent_id) {
+          alert("Payment Verified!")
+          console.log(" Verified Payment:", data);
+
+        } else {
+          console.warn("Payment session verification failed.");
+        }
+      })
+      .catch(err => {
+        console.error("Error verifying payment:", err);
+      });
+  }
       this.fetchTickets(ownerID);
     },
     methods: {
