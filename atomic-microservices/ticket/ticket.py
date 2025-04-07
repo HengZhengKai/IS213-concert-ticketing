@@ -9,6 +9,13 @@ from datetime import datetime
 import urllib.parse
 import logging
 from dotenv import load_dotenv
+import requests
+
+# Imports for QR Code generation
+import qrcode
+import base64
+from io import BytesIO
+import jwt # For decoding token
 
 # Load environment variables from .env file
 load_dotenv()
@@ -19,7 +26,22 @@ logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
 
-CORS(app)
+# --- JWT Secret Key --- 
+app.config['SECRET_KEY'] = os.getenv("JWT_SECRET_KEY", "your_default_super_secret_key")
+
+# --- Configure CORS --- 
+# Allow requests from WAMP, Python HTTP server, and potentially other local ports
+cors_origins = ["http://localhost", "http://localhost:8000", "http://localhost:8080"]
+CORS(app, 
+     resources={r"/*": {"origins": cors_origins}}, 
+     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"], # Allow common methods
+     allow_headers=["Authorization", "Content-Type", "Accept"], # Allow necessary headers
+     supports_credentials=True # If you need cookies/session later
+)
+# --- End CORS Configuration ---
+
+# --- Event Service URL --- 
+EVENT_SERVICE_URL = os.getenv("EVENT_SERVICE_URL", "http://event_service:5001")
 
 # MongoDB connection details from environment variables
 username = os.getenv("MONGO_USERNAME")
@@ -364,8 +386,13 @@ def get_all_tickets():
             "message": f"Error retrieving tickets: {str(e)}"
         }), 500
 
-
-
+# === QR Code Generation Endpoint (Simplified for Debugging) ===
+@app.route('/generateQR/<string:ticketID>', methods=['POST'])
+def generate_qr_code(ticketID):
+    logger.info(f"[DEBUG] Accessed simplified /generateQR route for ticketID: {ticketID}")
+    # Just return a simple success message to test route registration
+    return jsonify({"message": "QR Route OK"}), 200
+# === End Simplified Route ===
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5004, debug=True)

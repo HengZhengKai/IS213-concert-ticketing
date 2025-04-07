@@ -132,7 +132,12 @@
                    <p><strong>Seat:</strong> <span class="seat-number">{{ ticket.seatNo }}</span></p>
                    <p><strong>Status:</strong> <span class="check-in-status">{{ ticket.isCheckedIn ? 'Checked In' : 'Not Checked In' }}</span></p>
                  </div>
-                 <button class="btn check-in-btn" :data-ticket-id="ticket.ticketID" :disabled="ticket.isCheckedIn" :class="{ 'checked-in': ticket.isCheckedIn }">
+                 <button 
+                    class="btn check-in-btn" 
+                    :data-ticket-id="ticket.ticketID" 
+                    :disabled="ticket.isCheckedIn" 
+                    :class="{ 'checked-in': ticket.isCheckedIn }"
+                    @click="initiateCheckIn(ticket.ticketID)">
                    {{ ticket.isCheckedIn ? 'Checked In' : 'Check In' }}
                  </button>
                </div>
@@ -145,7 +150,7 @@
           <p>You have no booked tickets.</p>
         </div>
 
-        <!-- QR Code Modal (remains the same, controlled by JS/Vue later) -->
+        <!-- QR Code Modal -->
         <div class="modal fade" id="qrModal" tabindex="-1" aria-labelledby="qrModalLabel" aria-hidden="true">
           <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content">
@@ -155,8 +160,19 @@
               </div>
               <div class="modal-body">
                 <div class="qr-container">
-                  <div id="qrCode" class="qr-code"></div>
-                  <p class="mt-3" id="qrStatus">Waiting for scan...</p>
+                  <!-- Bind image src to qrCodeDataUrl -->
+                  <div id="qrCodeVue" class="qr-code">
+                     <!-- Show spinner while loading QR -->
+                     <div v-if="!qrCodeDataUrl && qrStatusMessage.startsWith('Generating')" class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Loading...</span>
+                     </div>
+                     <!-- Show QR code image if available -->
+                     <img v-else-if="qrCodeDataUrl" :src="qrCodeDataUrl" alt="QR Code">
+                     <!-- Show nothing or an error icon if QR failed? -->
+                     <i v-else-if="qrStatusMessage.startsWith('Error')" class="fas fa-exclamation-triangle fa-3x text-danger"></i>
+                  </div>
+                   <!-- Bind status message -->
+                  <p class="mt-3" id="qrStatusVue">{{ qrStatusMessage }}</p>
                 </div>
               </div>
             </div>

@@ -8,7 +8,12 @@ const app = Vue.createApp({
             loading: true,      // Loading state indicator
             error: null,        // Error message holder
             user: null,         // Store logged in user info
-            token: null         // Store auth token
+            token: null,        // Store auth token
+            // Add state for modal/check-in process
+            selectedTicketId: null,
+            qrCodeDataUrl: null,
+            qrStatusMessage: 'Initializing...',
+            isCheckingScan: false // To manage polling state later
         };
     },
     async mounted() {
@@ -57,7 +62,7 @@ const app = Vue.createApp({
                 }
 
                 const data = await response.json();
-                console.log("[Vue App] Tickets API response structure:", data);
+                console.log("[Vue App] Raw Tickets API response:", JSON.stringify(data)); // Log raw response
 
                 // Extract tickets array based on common API patterns
                 let ticketsArray = [];
@@ -72,6 +77,8 @@ const app = Vue.createApp({
                 } else {
                     console.error("[Vue App] Could not find tickets array in the response:", data);
                 }
+                
+                console.log("[Vue App] Extracted ticketsArray before processing:", JSON.stringify(ticketsArray)); // Log extracted array
                 
                 // *** IMPORTANT: Map API fields to consistent names if needed ***
                 this.tickets = ticketsArray.map(ticket => ({
@@ -101,8 +108,77 @@ const app = Vue.createApp({
                 console.error("Error formatting date:", dateTimeString, e);
                 return 'Invalid Date';
             }
+        },
+        formatImageUrl(imagePath) {
+            if (!imagePath) return placeholderImage;
+            return imagePath;
+        },
+        // --- Method to handle Check In button click ---
+        async initiateCheckIn(ticketId) {
+            console.log(`[Vue App] Initiating check-in for ticket ID: ${ticketId}`);
+            this.selectedTicketId = ticketId;
+            this.qrCodeDataUrl = null; // Clear previous QR code
+            this.qrStatusMessage = 'Generating QR Code...';
+            this.isCheckingScan = false; // Reset scan checking flag
+
+            // Get modal instance
+            const qrModalElement = document.getElementById('qrModal');
+            if (!qrModalElement) {
+                console.error("[Vue App] QR Modal element not found!");
+                this.error = "UI Error: Check-in modal is missing."; // Show error in main UI
+                return;
+            }
+            const qrModal = bootstrap.Modal.getInstance(qrModalElement) || new bootstrap.Modal(qrModalElement);
+
+            qrModal.show(); // Show modal immediately with loading state
+
+            try {
+                // 3. Call generateQR endpoint (POST)
+                const response = await fetch(`${ticketServiceBaseUrl}/generateQR/${this.selectedTicketId}`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${this.token}`,
+                        'Accept': 'application/json'
+                        // 'Content-Type': 'application/json' // Add if backend expects a body/content-type
+                    },
+                    // body: JSON.stringify({}) // Add if backend expects a body
+                });
+
+                if (!response.ok) {
+                    let errorMsg = `HTTP ${response.status}: ${response.statusText}`;
+                    try {
+                        const errorData = await response.json();
+                        errorMsg = errorData.message || JSON.stringify(errorData);
+                    } catch (e) { console.warn("Could not parse error response as JSON."); }
+                    throw new Error(errorMsg);
+                }
+
+                const data = await response.json();
+                console.log("[Vue App] QR Code data received:", data);
+
+                // 6. Display QR code in modal (assuming { qrCode: "data:image/..." })
+                if (data && data.qrCode) {
+                    this.qrCodeDataUrl = data.qrCode; // Store for display
+                    this.qrStatusMessage = 'Scan the QR Code';
+                    // --- We will start polling for scan status in the next step --- 
+                    // this.startCheckingScan(); 
+                } else {
+                    throw new Error('Invalid QR code data received from server.');
+                }
+
+            } catch (error) {
+                console.error('[Vue App] Error generating QR code:', error);
+                this.qrStatusMessage = `Error: ${error.message}`;
+                this.qrCodeDataUrl = null; // Clear QR code on error
+                // Optionally hide modal after showing error for a bit
+                // setTimeout(() => qrModal.hide(), 3000);
+            }
         }
-        // Methods for check-in, QR generation etc. will be added later
+        // --- End of initiateCheckIn method ---
+        
+        // Method for polling will be added later
+        // startCheckingScan() { ... }
+        // stopCheckingScan() { ... }
     }
 });
 
