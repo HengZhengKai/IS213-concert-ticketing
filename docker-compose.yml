@@ -124,6 +124,14 @@ services:
     depends_on:
       - rabbitmq
 
+  celery_email_service:
+    build: ./atomic-microservices/celery_email/
+    container_name: celery_email_service
+    ports:
+      - "5009:5009"
+    depends_on:
+      - rabbitmq 
+
   ##################################
   #? buy_ticket: The Buy Ticket microservice
   ##################################
