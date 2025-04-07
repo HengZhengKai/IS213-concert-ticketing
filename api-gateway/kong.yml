@@ -60,6 +60,7 @@ services:
       - name: payment_service_route
         paths:
           - /start-checkout
+          - /makerefund
         strip_path: false
 
   - name: email_service
