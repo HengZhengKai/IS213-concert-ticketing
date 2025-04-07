@@ -108,6 +108,7 @@ services:
         paths:
           - /generateqr
           - /scanqr
+          - /checkstatus
         strip_path: false
 
 plugins:
