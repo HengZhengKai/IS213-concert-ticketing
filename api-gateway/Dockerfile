@@ -1,5 +1,6 @@
-FROM kong
+FROM kong:3.6 
 USER root
-COPY kong.yml /
+
+# Copy your kong.yml to the expected directory
+COPY kong.yml /usr/local/kong/declarative/kong.yml
 USER kong
-RUN cp /etc/kong/kong.conf.default /etc/kong/kong.conf
