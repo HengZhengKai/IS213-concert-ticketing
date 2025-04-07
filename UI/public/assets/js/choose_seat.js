@@ -1,6 +1,7 @@
 const app = Vue.createApp({
   data() {
     return {
+      eventName: '',
       seats: [],
       selectedSeats: [],
       loading: true,
@@ -147,7 +148,13 @@ const app = Vue.createApp({
       const regex = /^\+\d{1,3}\d{7,12}$/;
       return regex.test(phone);
     },
-    validateForm() {
+    async validateForm() {
+      console.log("button");
+      const categories = [...new Set(this.selectedSeats.map(seat => seat.category))].sort();
+      const categoryLabel = categories.join(', ');
+      const productName = `${this.eventName} - Category ${categoryLabel}`;
+    
+      // Validate attendee forms
       for (const form of this.attendeeForms) {
         if (!form.name || !this.validateEmail(form.email) || !this.validatePhone(form.phone)) {
           this.selectionError = 'Please ensure all attendee emails and phone numbers are valid.';
@@ -156,10 +163,62 @@ const app = Vue.createApp({
           return false;
         }
       }
+    
       this.selectionError = '';
       this.showError = false;
+    
+      try {
+        const response = await fetch("http://localhost:5007/start-checkout", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            mode: "payment",
+            success_url: "http://localhost:8080/index.html",
+            cancel_url: "https://httpbin.org/status/400",
+            currency: "sgd", 
+            product_name: productName,
+            unit_amount: this.selectedSeats.length > 0 ? this.selectedSeats[0].price * 100 : 0, 
+            quantity: this.selectedSeats.length
+
+          })
+        });
+    
+        const result = await response.json();
+        if (result.checkout_url) {
+          window.location.href = result.checkout_url;
+        } else {
+          console.error("No checkout_url found in response:", result);
+          this.selectionError = "Something went wrong. Please try again.";
+          this.showError = true;
+        }
+    
+      } catch (error) {
+        console.error("Payment error:", error);
+        this.selectionError = "Something went wrong. Please try again.";
+        this.showError = true;
+      }
+    
       return true;
+    },
+    async fetchEventDetails() {
+      const { eventID } = this.getQueryParams();
+      try {
+        const res = await fetch(`http://localhost:5001/event/${eventID}`);
+        const data = await res.json();
+        if (data.code === 200) {
+          this.eventName = data.data.eventName;  // ✅ store the name
+        } else {
+          console.error("Failed to fetch event:", data.message);
+        }
+      } catch (e) {
+        console.error("Error fetching event:", e);
+      }
     }
+    
+    
+  
   },
   computed: {
     selectedCount() {
@@ -171,6 +230,7 @@ const app = Vue.createApp({
   },
   mounted() {
     this.fetchSeats();
+    this.fetchEventDetails();
   }
 });
 

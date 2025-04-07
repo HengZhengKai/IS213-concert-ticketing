@@ -23,35 +23,52 @@ def start_checkout():
           
         stripe_key = os.getenv("STRIPE_SECRET_KEY")
         
+        data = request.get_json()
+
+        # Extract values safely
+        mode = data.get("mode")
+        success_url = data.get("success_url")
+        cancel_url = data.get("cancel_url")
+        currency = data.get("currency")
+        product_name = data.get("product_name")
+        unit_amount = data.get("unit_amount")
+        quantity = data.get("quantity")
+
+        # ✅ Stripe key
+        stripe_key = os.getenv("STRIPE_SECRET_KEY")
+
+        # External endpoint for your custom Stripe handler
         outsystems_url = "https://personal-5nnqipga.outsystemscloud.com/Stripe/rest/payments/checkout"
-        
+
         payload = {
-            "mode": "payment",
-            "success_url": "https://httpbin.org/status/200",
-            "cancel_url": "https://httpbin.org/status/400",
-            "currency": "sgd",
-            "product_name": "Test Tour",
-            "unit_amount": 500,
-            "quantity": 1
+            "mode": mode,
+            "success_url": success_url,
+            "cancel_url": cancel_url,
+            "currency": currency,
+            "product_name": product_name,
+            "unit_amount": unit_amount,
+            "quantity": quantity
         }
 
         headers = {
              "Content-Type": "application/json",
              "Authorization": f"Bearer {stripe_key}"}
+        
 
         response = requests.post(outsystems_url, json=payload, headers=headers)
         response.raise_for_status()
 
         data = response.json()
-        session_id = data["id"]
-        if not session_id:
-            return jsonify({"error": "No session ID in response"}), 500
-
-        checkout_url = f"https://checkout.stripe.com/pay/{session_id}"
-        return redirect(checkout_url, code=303)
+        checkout_url = data.get("url") 
+        if not checkout_url:
+            return jsonify({"error": "No checkout URL in response"}), 500
+        return jsonify({"checkout_url": checkout_url})
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+      import traceback
+      traceback.print_exc()
+      return jsonify({"error": str(e)}), 500
+
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5007, debug=True)
