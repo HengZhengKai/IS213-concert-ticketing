@@ -116,6 +116,14 @@ def update_seat():
 def get_all_seats():
     try:
         seats = Seat.objects()
+        if not seats:
+            return jsonify(
+                {
+                    "code": 404,
+                    "message": f"No seats found."
+                }
+            ), 404
+
         return jsonify({
             "code": 200,
             "data": {
@@ -138,6 +146,15 @@ def get_seats_for_event(eventID, eventDateTime):
         dt = dt.replace(microsecond=0)
 
         seats = Seat.objects(eventID=eventID, eventDateTime=dt)
+        if not seats:
+            return jsonify(
+                {
+                    "code": 404,
+                    "message": f"No seats found."
+                }
+            ), 404
+
+
         return jsonify({
             "code": 200,
             "data": [seat.to_json() for seat in seats]
