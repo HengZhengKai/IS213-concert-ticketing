@@ -16,7 +16,7 @@ services:
       KONG_DATABASE: "off"
       KONG_DECLARATIVE_CONFIG: /usr/local/kong/declarative/kong.yml
     ports:
-      - "8080:8000" # http
+      - "8000:8000" # http
       - "8443:8443"
       - "8001:8001"
     volumes:
