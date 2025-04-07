@@ -56,7 +56,7 @@ def generate_qr(ticketID):
 
     return send_file(img_io, mimetype='image/png')
 
-@app.route("/scanqr/<string:ticketID>", methods=['POST'])
+@app.route("/scanqr/<string:ticketID>", methods=['GET', 'POST'])
 def on_qr_scanned(ticketID):
     if is_ticket_checked_in(ticketID):
         return jsonify({"error": "Ticket already checked in"}), 400
@@ -67,6 +67,13 @@ def on_qr_scanned(ticketID):
     if isinstance(response, dict) and response.get("code") == 200:
         return True  # Success
     return False  # Failed to update
+
+@app.route("/checkstatus/<string:ticketID>", methods=['GET'])
+def check_status(ticketID):
+    if is_ticket_checked_in(ticketID):
+        return jsonify({"status": "checked_in"})
+    else:
+        return jsonify({"status": "not_yet"})
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5103, debug=True)
