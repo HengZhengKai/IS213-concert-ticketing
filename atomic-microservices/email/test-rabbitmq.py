@@ -1,9 +1,3 @@
-#!/usr/bin/env python3
-"""
-Test script to publish sample messages to RabbitMQ for email service testing.
-This simulates messages that would come from your microservices.
-"""
-
 import pika
 import json
 import argparse

@@ -50,7 +50,7 @@ services:
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "5005:5005"
+      - "5008:5008"
     environment:
       - SMTP_SERVER=${SMTP_SERVER:-smtp.gmail.com}
       - SMTP_PORT=${SMTP_PORT:-587}
