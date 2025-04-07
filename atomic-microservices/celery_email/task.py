@@ -32,7 +32,8 @@ def send_message(user, ticket):
     # Message payload for email
     message = {
         "user_id": user["user_id"],
-        "user_email": user["user_email"],
+        "user_name": user["user_name"],
+        "event_id": ticket["event_id"],        
         "event_name": ticket["event_name"],
         "event_date": str(ticket["event_date"]),
         "expiration_time": str(ticket["expiration_time"])
