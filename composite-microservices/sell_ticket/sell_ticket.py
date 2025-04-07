@@ -107,9 +107,9 @@ def process_sell_ticket(ticket):
     payload = {
         "waitlist_users": waitlist_users["data"],
         "ticket": {
+            "event_id": eventID,
             "event_name": eventName,
             "event_date": eventDateTime,
-            "expiration_time": "15 minutes"
         }
     }
 
