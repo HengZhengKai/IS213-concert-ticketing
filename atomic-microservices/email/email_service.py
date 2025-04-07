@@ -45,28 +45,43 @@ rabbitmq_channel = None
 consumer_thread = None
 is_consuming = False
 
+# def get_user_email(user_id):
+#     try:
+#         response = requests.get(f"{USER_SERVICE_URL}/user/{user_id}")
+        
+#         if response.status_code == 200:
+#             user_data = response.json()
+#             if 'data' in user_data and 'email' in user_data['data']:
+#                 return user_data['data']['email']
+        
+#         logger.warning(f"Failed to get email for user {user_id}. Status code: {response.status_code}")
+#         return None
+#     except Exception as e:
+#         logger.error(f"Error fetching user email: {e}")
+#         return None
+
 def get_user_email(user_id):
-    """
-    Get user email from User Service
-    
-    Args:
-        user_id (str): User ID
-            
-    Returns:
-        str: User email address or None if not found
-    """
     try:
-        response = requests.get(f"{USER_SERVICE_URL}/user/{user_id}")
+        # Use the exact environment variable value
+        url = f"{USER_SERVICE_URL}/user/{user_id}"
+        logger.info(f"Attempting to fetch user email from URL: {url}")
+        
+        response = requests.get(url, timeout=5)
+        
+        logger.info(f"Response status code: {response.status_code}")
+        logger.info(f"Response content: {response.text}")
         
         if response.status_code == 200:
             user_data = response.json()
+            logger.info(f"User data: {user_data}")
+            
             if 'data' in user_data and 'email' in user_data['data']:
                 return user_data['data']['email']
         
         logger.warning(f"Failed to get email for user {user_id}. Status code: {response.status_code}")
         return None
     except Exception as e:
-        logger.error(f"Error fetching user email: {e}")
+        logger.error(f"Comprehensive error fetching user email: {e}")
         return None
 
 def get_user_tickets(user_id):
@@ -80,7 +95,7 @@ def get_user_tickets(user_id):
         list: List of ticket details or empty list if none found
     """
     try:
-        TICKET_SERVICE_URL = os.getenv('TICKET_SERVICE_URL', 'http://ticket-service:5004')
+        TICKET_SERVICE_URL = os.getenv('TICKET_SERVICE_URL', 'http://ticket_service:5004')
         
         response = requests.get(f"{TICKET_SERVICE_URL}/ticket/{user_id}")
         
@@ -183,14 +198,14 @@ def handle_ticket_purchase(ch, method, properties, body):
         logger.info(f"Received ticket purchase notification: {data}")
         
         # Get required data
-        user_id = data.get('user_id')
+        user_id = data.get('ownerID')
         user_name = data.get('user_name', 'Customer')
-        ticket_id = data.get('ticket_id')
+        ticket_id = data.get('_id')
         event_id = data.get('event_id')
         event_name = data.get('event_name')
-        event_date = data.get('event_date')
-        seat_no = data.get('seat_no')
-        seat_category = data.get('seat_category')
+        event_date = data.get('eventDateTime')
+        seat_no = data.get('seatNo')
+        seat_category = data.get('seatCategory')
         seat_info = data.get('seat_info') or f"{seat_category}, Seat {seat_no}"
         price = data.get('price', 0)
         
@@ -245,13 +260,14 @@ def handle_ticket_resale(ch, method, properties, body):
         buyer_name = data.get('buyer_name', 'Customer')
         seller_id = data.get('seller_id')
         seller_name = data.get('seller_name', 'Customer')
-        ticket_id = data.get('ticket_id')
+        ticket_id = data.get('_id')
         event_id = data.get('event_id')
         event_name = data.get('event_name')
-        seat_no = data.get('seat_no')
-        seat_category = data.get('seat_category')
+        eventDateTime = data.get('eventDateTime')
+        seat_no = data.get('seatNo')
+        seat_category = data.get('seatCategory')
         price = data.get('price', 0)
-        charge_id = data.get('charge_id', 'N/A')
+        paymentID = data.get('paymentID', 'N/A')
         refund_amount = data.get('refund_amount', price)
         
         # Get emails
@@ -298,7 +314,7 @@ def handle_ticket_resale(ch, method, properties, body):
                 <p>Category: {seat_category}</p>
                 <p>Resale Price: ${price}</p>
                 <p>You have been refunded ${refund_amount}</p>
-                <p>Charge ID: {charge_id}</p>
+                <p>Payment ID: {paymentID}</p>
             </body>
             </html>
             """
@@ -364,53 +380,53 @@ def handle_waitlist_notification(ch, method, properties, body):
         logger.error(f"Error processing waitlist notification: {e}")
         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
-def handle_ticket_checkin(ch, method, properties, body):
-    """Handle ticket check-in email"""
-    try:
-        data = json.loads(body)
-        logger.info(f"Received ticket check-in notification: {data}")
+# def handle_ticket_checkin(ch, method, properties, body):
+#     """Handle ticket check-in email"""
+#     try:
+#         data = json.loads(body)
+#         logger.info(f"Received ticket check-in notification: {data}")
         
-        # Get required data
-        user_id = data.get('user_id')
-        ticket_id = data.get('ticket_id')
-        event_name = data.get('event_name')
-        check_in_time = data.get('check_in_time')
+#         # Get required data
+#         user_id = data.get('user_id')
+#         ticket_id = data.get('_id')
+#         event_name = data.get('event_name')
+#         check_in_time = data.get('check_in_time')
         
-        # Get user email
-        user_email = data.get('user_email')
-        if not user_email and user_id:
-            user_email = get_user_email(user_id)
+#         # Get user email
+#         user_email = data.get('user_email')
+#         if not user_email and user_id:
+#             user_email = get_user_email(user_id)
             
-        if not user_email:
-            logger.error(f"No email address found for check-in notification")
-            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
-            return
+#         if not user_email:
+#             logger.error(f"No email address found for check-in notification")
+#             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+#             return
         
-        # Create email content
-        subject = f"Check-in Confirmation for {event_name}"
+#         # Create email content
+#         subject = f"Check-in Confirmation for {event_name}"
         
-        html_content = f"""
-        <html>
-        <body>
-            <h2>Event Check-in Confirmation</h2>
-            <p>You have successfully checked in to {event_name}!</p>
-            <p>Ticket ID: {ticket_id}</p>
-            <p>Check-in Time: {check_in_time}</p>
-            <p>Enjoy the event!</p>
-        </body>
-        </html>
-        """
+#         html_content = f"""
+#         <html>
+#         <body>
+#             <h2>Event Check-in Confirmation</h2>
+#             <p>You have successfully checked in to {event_name}!</p>
+#             <p>Ticket ID: {ticket_id}</p>
+#             <p>Check-in Time: {check_in_time}</p>
+#             <p>Enjoy the event!</p>
+#         </body>
+#         </html>
+#         """
         
-        # Send email
-        send_email(user_email, subject, html_content)
+#         # Send email
+#         send_email(user_email, subject, html_content)
         
-        # Acknowledge message
-        ch.basic_ack(delivery_tag=method.delivery_tag)
-        logger.info(f"Ticket check-in email sent to {user_email}")
+#         # Acknowledge message
+#         ch.basic_ack(delivery_tag=method.delivery_tag)
+#         logger.info(f"Ticket check-in email sent to {user_email}")
         
-    except Exception as e:
-        logger.error(f"Error processing ticket check-in: {e}")
-        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+#     except Exception as e:
+#         logger.error(f"Error processing ticket check-in: {e}")
+#         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
 def handle_payment_confirmation(ch, method, properties, body):
     """Handle payment confirmation email"""
@@ -463,54 +479,6 @@ def handle_payment_confirmation(ch, method, properties, body):
         logger.error(f"Error processing payment confirmation: {e}")
         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
-def handle_waitlist_notification(ch, method, properties, body):
-    """Handle waitlist notification email"""
-    try:
-        data = json.loads(body)
-        logger.info(f"Received waitlist notification: {data}")
-        
-        # Get required data
-        user_id = data.get('user_id')
-        event_name = data.get('event_name')
-        event_date = data.get('event_date')
-        expiration_time = data.get('expiration_time')  # Time until this offer expires
-        
-        # Get user email
-        user_email = data.get('user_email')
-        if not user_email and user_id:
-            user_email = get_user_email(user_id)
-            
-        if not user_email:
-            logger.error(f"No email address found for waitlist notification")
-            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
-            return
-        
-        # Create email content
-        subject = f"Tickets Now Available for {event_name}"
-        
-        html_content = f"""
-        <html>
-        <body>
-            <h2>Waitlist Notification</h2>
-            <p>Good news! Tickets are now available for {event_name} on {event_date}.</p>
-            <p>As you were on our waitlist, you now have priority access to purchase tickets.</p>
-            <p><strong>This offer expires in: {expiration_time}</strong></p>
-            <p>Please log in to your account to complete your purchase.</p>
-        </body>
-        </html>
-        """
-        
-        # Send email
-        send_email(user_email, subject, html_content)
-        
-        # Acknowledge message
-        ch.basic_ack(delivery_tag=method.delivery_tag)
-        logger.info(f"Waitlist notification email sent to {user_email}")
-        
-    except Exception as e:
-        logger.error(f"Error processing waitlist notification: {e}")
-        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
-
 def start_consuming():
     """Set up consumers for all email queues and start consuming messages"""
     global rabbitmq_channel, is_consuming
@@ -529,11 +497,11 @@ def start_consuming():
             auto_ack=False
         )
         
-        rabbitmq_channel.basic_consume(
-            queue='email.ticket.checkin',
-            on_message_callback=handle_ticket_checkin,
-            auto_ack=False
-        )
+        # rabbitmq_channel.basic_consume(
+        #     queue='email.ticket.checkin',
+        #     on_message_callback=handle_ticket_checkin,
+        #     auto_ack=False
+        # )
         
         rabbitmq_channel.basic_consume(
             queue='email.payment.confirmation',

@@ -8,6 +8,8 @@ import urllib.parse
 import logging
 from dotenv import load_dotenv
 import jwt
+import pika
+import json
 
 # Load environment variables from .env file
 load_dotenv()
@@ -41,6 +43,39 @@ try:
 except Exception as e:
     logger.error(f"Failed to connect to MongoDB: {e}")
 
+RABBITMQ_HOST = os.getenv('RABBITMQ_HOST')
+RABBITMQ_PORT = int(os.getenv('RABBITMQ_PORT'))
+RABBITMQ_USER = os.getenv('RABBITMQ_USER')
+RABBITMQ_PASS = os.getenv('RABBITMQ_PASS')
+
+def publish_to_rabbitmq(routing_key, message):
+    try:
+        # Create connection parameters
+        credentials = pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASS)
+        parameters = pika.ConnectionParameters(
+            host=RABBITMQ_HOST,
+            port=RABBITMQ_PORT,
+            credentials=credentials
+        )
+        
+        # Connect to RabbitMQ
+        connection = pika.BlockingConnection(parameters)
+        channel = connection.channel()
+        
+        # Publish message
+        channel.basic_publish(
+            exchange='ticketing',
+            routing_key=routing_key,
+            body=json.dumps(message)
+        )
+        
+        # Close connection
+        connection.close()
+        logger.info(f"Published message with routing key: {routing_key}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to publish to RabbitMQ: {e}")
+        return False
 class User(db.Document): # tell flask what are the fields in your database
     _id = db.StringField(primary_key=True) 
     name = db.StringField()
