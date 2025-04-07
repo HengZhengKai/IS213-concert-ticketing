@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 import mongoengine as db
 from datetime import datetime
+from dateutil import parser
 from os import environ
 import os
 from datetime import datetime
@@ -77,6 +78,11 @@ def get_waitlist(eventID, eventDateTime):
 
 @app.route('/waitlist/<string:eventID>/<string:eventDateTime>', methods=['POST'])
 def add_to_waitlist(eventID, eventDateTime):
+    try:
+        event_date = parser.isoparse(eventDateTime)
+    except ValueError:
+        return jsonify({"code": 400, "message": "Invalid eventDateTime format."}), 400
+
     data = request.get_json()
     if not data or "userID" not in data:
         return jsonify({"code": 400, "message": "Missing userID in request body."}), 400
