@@ -10,6 +10,9 @@ import urllib.parse
 import logging
 from dotenv import load_dotenv
 import requests
+#For Rabbitmq message publishing
+import pika
+import json
 
 # Imports for QR Code generation
 import qrcode
@@ -33,10 +36,10 @@ app.config['SECRET_KEY'] = os.getenv("JWT_SECRET_KEY", "your_default_super_secre
 # Allow requests from WAMP, Python HTTP server, and potentially other local ports
 cors_origins = ["http://localhost", "http://localhost:8000", "http://localhost:8080"]
 CORS(app, 
-     resources={r"/*": {"origins": cors_origins}}, 
-     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"], # Allow common methods
-     allow_headers=["Authorization", "Content-Type", "Accept"], # Allow necessary headers
-     supports_credentials=True # If you need cookies/session later
+        resources={r"/*": {"origins": cors_origins}}, 
+        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"], # Allow common methods
+        allow_headers=["Authorization", "Content-Type", "Accept"], # Allow necessary headers
+        supports_credentials=True # If you need cookies/session later
 )
 # --- End CORS Configuration ---
 
@@ -60,6 +63,40 @@ try:
 except Exception as e:
     logger.error(f"Failed to connect to MongoDB: {e}")
 
+# RabbitMQ configuration
+RABBITMQ_HOST = os.getenv('RABBITMQ_HOST', 'localhost')
+RABBITMQ_PORT = int(os.getenv('RABBITMQ_PORT', 5672))
+RABBITMQ_USER = os.getenv('RABBITMQ_USER', 'guest')
+RABBITMQ_PASS = os.getenv('RABBITMQ_PASS', 'guest')
+
+def publish_to_rabbitmq(routing_key, message):
+    try:
+        # Create connection parameters
+        credentials = pika.PlainCredentials(RABBITMQ_USER, RABBITMQ_PASS)
+        parameters = pika.ConnectionParameters(
+            host=RABBITMQ_HOST,
+            port=RABBITMQ_PORT,
+            credentials=credentials
+        )
+        
+        # Connect to RabbitMQ
+        connection = pika.BlockingConnection(parameters)
+        channel = connection.channel()
+        
+        # Publish message
+        channel.basic_publish(
+            exchange='ticketing',
+            routing_key=routing_key,
+            body=json.dumps(message)
+        )
+        
+        # Close connection
+        connection.close()
+        logger.info(f"Published message with routing key: {routing_key}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to publish to RabbitMQ: {e}")
+        return False
 class Ticket(db.Document): # tell flask what are the fields in your database
     ticketID = db.StringField(primary_key = True)
     ownerID = db.StringField()
