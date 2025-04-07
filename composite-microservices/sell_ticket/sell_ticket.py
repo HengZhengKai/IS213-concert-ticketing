@@ -55,19 +55,9 @@ def process_sell_ticket(ticket):
     # Check the ticket result; if a failure, do error handling.
     code = ticket_result["code"]
     if code not in range(200, 300):
-        pass
-        # # Inform the error microservice
-        # print('\n\n-----Invoking error microservice as order fails-----')
-        # invoke_http(error_URL, method="POST", json=ticket_result)
-        # # - reply from the invocation is not used; 
-        # # continue even if this invocation fails
-        # print("Order status ({:d}) sent to the error microservice:".format(
-        #     code), order_result)
-
         return {
             "code": 500,
-            "data": {"ticket_result": ticket_result},
-            "message": "Ticket update failure, sent for error handling."
+            "message": "Ticket update failure",
         }
 
     # Step 4-5. Query eventID and eventDateTime
@@ -118,8 +108,7 @@ def process_sell_ticket(ticket):
     if celery_result["code"] not in range(200, 300):
         return {
             "code": 500,
-            "data": {"celery_result": celery_result},
-            "message": "Error, sent for error handling."
+            "message": "Celery task failure",
         }
 
     # Step 9: Return Ticket up for Resale

@@ -84,18 +84,10 @@ def process_buy_ticket(userID, eventName, eventID, eventDateTime, seatNo, seatCa
     # Check the event result; if a failure, do error handling.
     code = event_result["code"]
     if code not in range(200, 300):
-        # # Inform the error microservice
-        # print('\n\n-----Invoking error microservice as order fails-----')
-        # invoke_http(error_URL, method="POST", json=ticket_result)
-        # # - reply from the invocation is not used; 
-        # # continue even if this invocation fails
-        # print("Order status ({:d}) sent to the error microservice:".format(
-        #     code), order_result)
-
         return {
             "code": 500,
             "data": {"event_result": event_result},
-            "message": "Event update failure, sent for error handling."
+            "message": "Failed to update event."
         }
     
     # Step 4-5: Get user name and email from userID
@@ -190,30 +182,4 @@ def process_buy_ticket(userID, eventName, eventID, eventDateTime, seatNo, seatCa
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5100, debug=True)
-
-
-    # # Step 4-5. Update seat status
-    # print('\n-----Invoking seat microservice-----')
-    # seat_result = invoke_http(f"{seat_URL}", method="PUT",json = {"eventID":eventID,
-    #                                                               "eventDateTime":eventDateTime,
-    #                                                               "seatNo":seatNo,
-    #                                                               "status":"booked"})
-    
-    # # Check the ticket result; if a failure, do error handling.
-    # code = seat_result["code"]
-    # if code not in range(200, 300):
-    #     pass
-    #     # # Inform the error microservice
-    #     # print('\n\n-----Invoking error microservice as order fails-----')
-    #     # invoke_http(error_URL, method="POST", json=ticket_result)
-    #     # # - reply from the invocation is not used; 
-    #     # # continue even if this invocation fails
-    #     # print("Order status ({:d}) sent to the error microservice:".format(
-    #     #     code), order_result)
-
-    #     return {
-    #         "code": 500,
-    #         "data": {"seat_result": seat_result},
-    #         "message": "Seat update failure, sent for error handling."
-    #     }
     
