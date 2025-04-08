@@ -3,6 +3,7 @@ from flask_cors import CORS
 from flask_graphql import GraphQLView
 import graphene
 import mongoengine as db
+from datetime import datetime
 from os import environ
 import os
 import re
@@ -395,6 +396,8 @@ def create_ticket(ticketID):
                 "message": "Price must be a non-negative number."
             }), 400
         
+        event_datetime = datetime.fromisoformat(data["eventDateTime"].replace("Z", "+00:00"))
+
         # Create and save the new ticket
         ticket = Ticket(
             ticketID=ticketID,
@@ -402,7 +405,7 @@ def create_ticket(ticketID):
             ownerName=data["ownerName"],
             eventID=data["eventID"],
             eventName=data["eventName"],
-            eventDateTime=data["eventDateTime"],            
+            eventDateTime=event_datetime,
             seatNo=data["seatNo"],
             seatCategory=data["seatCategory"],
             price=data["price"],
