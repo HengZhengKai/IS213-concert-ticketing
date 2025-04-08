@@ -14,7 +14,14 @@ local_ip = socket.gethostbyname(hostname)
 
 app = Flask(__name__)
 
-CORS(app)
+CORS(app, supports_credentials=True, resources={r"/*": {"origins": "http://localhost:8080"}})
+
+@app.after_request
+def after_request(response):
+    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:8080')
+    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
+    response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
+    return response
 
 ticket_URL = "http://localhost:5004/ticket"
 
@@ -34,11 +41,8 @@ def is_ticket_checked_in(ticketID):
             return data["data"]["isCheckedIn"]
     return False  # Return False if ticket is not found or response is invalid
 
-@app.route("/generateqr/<string:ticketID>", methods=['POST'])
-def generate_qr(ticketID):
-    if is_ticket_checked_in(ticketID) == True:
-        return jsonify({"error": "Ticket already checked in"}), 400
-    
+@app.route('/generateQR/<string:ticketID>', methods=['POST', 'OPTIONS'])
+def generate_qr_code(ticketID):
     # Use current local IP to construct full scan URL
     scan_url = f"http://{local_ip}:5103/scanqr/{ticketID}"
 

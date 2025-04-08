@@ -120,7 +120,7 @@ const app = Vue.createApp({
             this.qrCodeDataUrl = null; // Clear previous QR code
             this.qrStatusMessage = 'Generating QR Code...';
             this.isCheckingScan = false; // Reset scan checking flag
-
+            
             // Get modal instance
             const qrModalElement = document.getElementById('qrModal');
             if (!qrModalElement) {
@@ -131,47 +131,40 @@ const app = Vue.createApp({
             const qrModal = bootstrap.Modal.getInstance(qrModalElement) || new bootstrap.Modal(qrModalElement);
 
             qrModal.show(); // Show modal immediately with loading state
-
+        
             try {
                 // 3. Call generateQR endpoint (POST)
                 const response = await fetch(`${checkInServiceBaseUrl}/generateQR/${this.selectedTicketId}`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${this.token}`,
-                        'Accept': 'application/json'
-                        // 'Content-Type': 'application/json' // Add if backend expects a body/content-type
+                        'Accept': 'application/json',
                     },
-                    // body: JSON.stringify({}) // Add if backend expects a body
                 });
-
+        
                 if (!response.ok) {
                     let errorMsg = `HTTP ${response.status}: ${response.statusText}`;
                     try {
                         const errorData = await response.json();
                         errorMsg = errorData.message || JSON.stringify(errorData);
-                    } catch (e) { console.warn("Could not parse error response as JSON."); }
+                    } catch (e) {
+                        console.warn("Could not parse error response as JSON.");
+                    }
                     throw new Error(errorMsg);
                 }
-
-                const data = await response.json();
-                console.log("[Vue App] QR Code data received:", data);
-
-                // 6. Display QR code in modal (assuming { qrCode: "data:image/..." })
-                if (data && data.qrCode) {
-                    this.qrCodeDataUrl = data.qrCode; // Store for display
-                    this.qrStatusMessage = 'Scan the QR Code';
-                    // --- We will start polling for scan status in the next step --- 
-                    // this.startCheckingScan(); 
-                } else {
-                    throw new Error('Invalid QR code data received from server.');
-                }
-
+        
+                // Handle the response as a binary blob
+                const blob = await response.blob(); // Get the response as a Blob (image data)
+        
+                // Create a URL for the Blob to use as an image source
+                this.qrCodeDataUrl = URL.createObjectURL(blob);  // Update Vue data property for image source
+        
+                console.log("[Vue App] QR Code image received and displayed.");
+        
             } catch (error) {
                 console.error('[Vue App] Error generating QR code:', error);
                 this.qrStatusMessage = `Error: ${error.message}`;
                 this.qrCodeDataUrl = null; // Clear QR code on error
-                // Optionally hide modal after showing error for a bit
-                // setTimeout(() => qrModal.hide(), 3000);
             }
         }
         // --- End of initiateCheckIn method ---
