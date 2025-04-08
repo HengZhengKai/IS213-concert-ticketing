@@ -142,6 +142,7 @@ services:
     ports:
       - "5100:5100"
     environment:
+      RABBITMQ_HOST: rabbitmq
       event_service_URL: http://event_service:5001
       seat_service_URL: http://seat_service:5002
       waitlist_service_URL: http://waitlist_service:5003
@@ -174,6 +175,7 @@ services:
       ticket_service_URL: http://ticket_service:5004
       user_service_URL: http://user_service:5006
       email_service_URL: http://email_service:5008
+      celery_email_service_URL: http://celery_email_service:5009
     depends_on:
       - waitlist_service
       - ticket_service
@@ -186,6 +188,7 @@ services:
     ports:
       - "5102:5102"
     environment:
+      RABBITMQ_HOST: rabbitmq
       ticket_service_URL: http://ticket_service:5004
       transaction_service_URL: http://transaction_service:5005
       user_service_URL: http://user_service:5006
@@ -218,8 +221,8 @@ services:
     container_name: rabbitmq
     restart: always
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "5672:5672" # AMQP
+      - "15672:15672"  # Management UI
     volumes:
       - rabbitmq_data:/var/lib/rabbitmq
     environment:

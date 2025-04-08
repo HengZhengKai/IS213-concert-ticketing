@@ -6,13 +6,29 @@ import requests
 import pika
 import json
 from invokes import invoke_http
+import time
 
 app = Flask(__name__)
 
 CORS(app)
 
-connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
-channel = connection.channel()
+rabbitmq_host = os.getenv("RABBITMQ_HOST", "localhost")
+credentials = pika.PlainCredentials('guest', 'guest')
+
+for attempt in range(5):
+    try:
+        print(f"Connecting to RabbitMQ at {rabbitmq_host} (Attempt {attempt + 1})...")
+        parameters = pika.ConnectionParameters(host=rabbitmq_host, credentials=credentials)
+        connection = pika.BlockingConnection(parameters)
+        channel = connection.channel()
+        print("Successfully connected to RabbitMQ.")
+        break
+    except pika.exceptions.AMQPConnectionError as e:
+        print(f"Connection failed: {e}")
+        time.sleep(5)
+else:
+    raise Exception("Could not connect to RabbitMQ after multiple attempts.")
+    exit(1)
 
 event_URL = "http://localhost:5001/event"
 seat_URL = "http://localhost:5002/seat"
