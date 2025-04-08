@@ -21,7 +21,7 @@ def sell_ticket(ticketID):
     if request.is_json:
         try:
             ticket = request.get_json()
-            ticket["ticketID"] = ticketID # ticket looks like {ticketID: T001, resalePrice: 80}
+            ticket["ticketID"] = ticketID  # ticket looks like {ticketID: T001, resalePrice: 80}
             print("\nReceived a ticket in JSON:", ticket)
 
             # 1. Put ticket up for sale
@@ -37,9 +37,8 @@ def sell_ticket(ticketID):
 
             return jsonify({
                 "code": 500,
-                "message": "sell_ticket.py internal error: " + ex_str
+                "message": f"sell_ticket.py internal error: {ex_str}"
             }), 500
-
 
     # if reached here, not a JSON request.
     return jsonify({
@@ -48,84 +47,97 @@ def sell_ticket(ticketID):
     }), 400
 
 def process_sell_ticket(ticket):
-    # Step 2-3. Update ticket resalePrice and status
-    print('\n-----Invoking ticket microservice-----')
-    ticket_result = invoke_http(f"{ticket_URL}/ticket/{ticket.ticketID}", method='PUT', json={"resalePrice": ticket.resalePrice, "status": "available"})
+    try:
+        # Step 2-3. Update ticket resalePrice and status
+        print('\n-----Invoking ticket microservice-----')
+        ticket_result = invoke_http(f"{ticket_URL}/ticket/{ticket['ticketID']}", method='PUT', json={"resalePrice": ticket["resalePrice"], "status": "available"})
 
-    # Check the ticket result; if a failure, do error handling.
-    code = ticket_result["code"]
-    if code not in range(200, 300):
-        if code == 400:
-            return {
-                "code": 400,
-                "message": "Resale price cannot be higher than the original price or the previous resale price."
+        # Check the ticket result; if a failure, do error handling.
+        code = ticket_result["code"]
+        if code not in range(200, 300):
+            if code == 400:
+                return {
+                    "code": 400,
+                    "message": "Resale price cannot be higher than the original price or the previous resale price."
+                }
+            else:
+                return {
+                    "code": 500,
+                    "message": f"Ticket update failure, status code: {code}",
+                }
+
+        # Step 4-5. Query eventID and eventDateTime
+        print('\n-----Querying ticket microservice-----')
+        query = """
+        query {
+            eventDetails(ticketID: $ticketID) {
+                eventID
+                eventName
+                eventDateTime
             }
-        else:
+        }
+        """
+        variables = {"ticketID": ticket["ticketID"]}
+        response = requests.post(f"{ticket_URL}/graphql", json={'query': query, 'variables': variables})
+
+        # Check if response is valid
+        if response.status_code != 200:
             return {
                 "code": 500,
-                "message": "Ticket update failure",
+                "message": f"Failed to query event details, status code: {response.status_code}"
             }
 
-    # Step 4-5. Query eventID and eventDateTime
-    print('\n-----Querying ticket microservice-----')
-    query = """
-    query {
-        eventDetails(ticketID: $ticketID) {
-            eventID
-            eventName
-            eventDateTime
+        event_data = response.json()
+
+        if "data" in event_data and event_data["data"]["eventDetails"]:
+            eventID = event_data["data"]["eventDetails"]["eventID"]
+            eventName = event_data["data"]["eventDetails"]["eventName"]
+            eventDateTime = event_data["data"]["eventDetails"]["eventDateTime"]
+        else:
+            print("Error: Could not retrieve event details")
+            return {"code": 500, "message": "Event details not found or invalid response from ticket service."}
+
+        # Step 6-7. Get waitlist users
+        print('\n-----Invoking waitlist microservice-----')
+        waitlist_users = invoke_http(f"{waitlist_URL}/waitlist/{eventID}/{eventDateTime}")
+
+        if not waitlist_users:
+            print("No users on waitlist.")
+            return {'code': 404, 'message': 'No users on waitlist.'}
+
+        # Step 8: Email all waitlist users
+        payload = {
+            "waitlist_users": waitlist_users["data"]["waitlist"],
+            "ticket": {
+                "event_id": eventID,
+                "event_name": eventName,
+                "event_date": eventDateTime,
+            }
         }
-    }
-    """
-    variables = {"ticketID": ticket.ticketID}
-    response = requests.post(f"{ticket_URL}/graphql", json={'query': query, 'variables': variables})
-    
-    # Step 5: Process event details to call the right waitlist route
-    event_data = response.json()
-    
-    if "data" in event_data and event_data["data"]["eventDetails"]:
-        eventID = event_data["data"]["eventDetails"]["eventID"]
-        eventName = event_data["data"]["eventDetails"]["eventName"]
-        eventDateTime = event_data["data"]["eventDetails"]["eventDateTime"]
-    else:
-        print("Error: Could not retrieve event details")
-        return {"error": "Event details not found"}
 
-    # Step 6-7. Get waitlist users
-    print('\n-----Invoking waitlist microservice-----')
-    waitlist_users = invoke_http(f"{waitlist_URL}/waitlist/{eventID}/{eventDateTime}")
-    
-    if not waitlist_users:
-        print("No users on waitlist.")
-        return {'status': 404, 'message': 'No users on waitlist.'}
-    
-    # Step 8: Email all waitlist users
-    payload = {
-        "waitlist_users": waitlist_users["data"]["waitlist"],
-        "ticket": {
-            "event_id": eventID,
-            "event_name": eventName,
-            "event_date": eventDateTime,
+        celery_result = invoke_http(f"{celery_URL}", method='POST', json=payload)
+
+        if celery_result["code"] not in range(200, 300):
+            return {
+                "code": 500,
+                "message": f"Celery task failure, status code: {celery_result['code']}",
+            }
+
+        # Step 9: Return Ticket up for Resale
+        return {
+            "code": 201,
+            "data": {
+                "ticketID": ticket["ticketID"],
+                "resalePrice": ticket["resalePrice"]
+            },
+            "message": "Ticket up for resale."
         }
-    }
 
-    celery_result = invoke_http(f"{celery_URL}", method='POST', json=payload)
-
-    if celery_result["code"] not in range(200, 300):
+    except Exception as e:
         return {
             "code": 500,
-            "message": "Celery task failure",
+            "message": f"Error processing ticket sale: {str(e)}"
         }
-
-    # Step 9: Return Ticket up for Resale
-    return {
-        "code": 201,
-        "data": {
-            "ticketID": ticket.ticketID,
-            "resalePrice": ticket.resalePrice
-        },
-        "message": "Ticket up for resale."
-    }
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5101, debug=True)
