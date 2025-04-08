@@ -192,10 +192,7 @@ def select_event(eventID):
 #Route 3
 @app.route("/event/<string:eventID>/<string:eventDateTime>")
 def select_event_date(eventID, eventDateTime):
-    # Convert eventDateTime string to datetime object
     try:
-        event_date_obj = eventDateTime
-
         # Find the Event document
         event = Event.objects(eventID=eventID).first()
         if not event:
@@ -207,13 +204,13 @@ def select_event_date(eventID, eventDateTime):
             ), 404
 
         # Find the specific EventDate
-        event_date = EventDate.objects(eventID=eventID, eventDateTime=event_date_obj).first()
+        event_date = EventDate.objects(eventID=eventID, eventDateTime=eventDateTime).first()
 
         if not event_date:
             return jsonify(
                 {
                     "code": 404,
-                    "message": f"No event date found for eventID {eventID} on {eventDateTime}. Your query was transformed to {event_date_obj}",
+                    "message": f"No event date found for eventID {eventID} on {eventDateTime}.",
                 }
             ), 404
 
@@ -236,7 +233,6 @@ def select_event_date(eventID, eventDateTime):
 @app.route("/event/<string:eventID>/<string:eventDateTime>", methods = ["PUT"])
 def update_event(eventID, eventDateTime):
     try:
-
         # Find the Event document
         event = Event.objects(eventID=eventID).first()
         if not event:
@@ -248,12 +244,13 @@ def update_event(eventID, eventDateTime):
             ), 404
 
         # Find the specific EventDate
-        event_date = EventDate.objects(event=event, eventDateTime=event_date_obj).first()
+        event_date = EventDate.objects(eventID=eventID, eventDateTime=eventDateTime).first()
+
         if not event_date:
             return jsonify(
                 {
                     "code": 404,
-                    "message": f"No event date found for eventID {eventID} on {eventDateTime}."
+                    "message": f"No event date found for eventID {eventID} on {eventDateTime}.",
                 }
             ), 404
 
@@ -280,6 +277,8 @@ def update_event(eventID, eventDateTime):
 
         # Update available seats
         event_date.availableSeats = data["availableSeats"]
+        event_date.event = event
+
         event_date.save()
 
         # Return updated event date
