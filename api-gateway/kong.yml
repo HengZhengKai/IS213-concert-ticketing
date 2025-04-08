@@ -3,7 +3,7 @@ _transform: true
 
 services:
   - name: event_service
-    url: http://event_service:5001
+    url: http://event-service:5001
     routes:
       - name: event_service_route
         paths:
@@ -11,7 +11,7 @@ services:
         strip_path: false
 
   - name: seat_service
-    url: http://seat_service:5002
+    url: http://seat-service:5002
     routes:
       - name: seat_service_route
         paths:
@@ -20,7 +20,7 @@ services:
         strip_path: false          
 
   - name: waitlist_service
-    url: http://waitlist_service:5003
+    url: http://waitlist-service:5003
     routes:
       - name: waitlist_service_route
         paths:
@@ -28,7 +28,7 @@ services:
         strip_path: false
 
   - name: ticket_service
-    url: http://ticket_service:5004
+    url: http://ticket-service:5004
     routes:
       - name: ticket_service_route
         paths:
@@ -38,7 +38,7 @@ services:
         strip_path: false
 
   - name: transaction_service
-    url: http://transaction_service:5005
+    url: http://transaction-service:5005
     routes:
       - name: transaction_service_route
         paths:
@@ -46,7 +46,7 @@ services:
         strip_path: false
   
   - name: user_service
-    url: http://user_service:5006
+    url: http://user-service:5006
     routes:
       - name: user_service_route
         paths:
@@ -55,7 +55,7 @@ services:
         strip_path: false
 
   - name: payment_service
-    url: http://payment_service:5007
+    url: http://payment-service:5007
     routes:
       - name: payment_service_route
         paths:
@@ -64,7 +64,7 @@ services:
         strip_path: false
 
   - name: email_service
-    url: http://email_service:5008
+    url: http://email-service:5008
     routes:
       - name: email_service_route
         paths:
@@ -72,7 +72,7 @@ services:
         strip_path: false
 
   - name: celery_email_service
-    url: http://celery_email_service:5009
+    url: http://celery-email-service:5009
     routes:
       - name: celery_email_service_route
         paths:
@@ -80,7 +80,7 @@ services:
         strip_path: false  
 
   - name: buy_ticket_service
-    url: http://buy_ticket_service:5100
+    url: http://buy-ticket-service:5100
     routes:
       - name: buy_ticket_service_route
         paths:
@@ -88,7 +88,7 @@ services:
         strip_path: false
 
   - name: sell_ticket_service
-    url: http://sell_ticket_service:5101
+    url: http://sell-ticket-service:5101
     routes:
       - name: sell_ticket_service_route
         paths:
@@ -96,7 +96,7 @@ services:
         strip_path: false
 
   - name: buy_resale_ticket_service
-    url: http://buy_resale_ticket_service:5102
+    url: http://buy-resale-ticket-service:5102
     routes:
       - name: buy_resale_ticket_service_route
         paths:
@@ -104,7 +104,7 @@ services:
         strip_path: false
 
   - name: check_in_service
-    url: http://check_in_ticket_service:5103
+    url: http://check-in-ticket-service:5103
     routes:
       - name: check_in_ticket_service_route
         paths:
