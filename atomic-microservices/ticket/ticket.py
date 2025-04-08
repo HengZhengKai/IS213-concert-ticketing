@@ -139,6 +139,9 @@ class Ticket(db.Document): # tell flask what are the fields in your database
             "paymentID": self.paymentID,
             "isCheckedIn": self.isCheckedIn
         }
+    
+    def save(self, *args, **kwargs):
+        super().save(*args, **kwargs)
 
 # Define GraphQL Queries
 class EventDetails(graphene.ObjectType):
@@ -283,16 +286,17 @@ def update_ticket(ticketID):
     if not ticket:
         return jsonify({"code": 404, "message": "Ticket not found."}), 404
 
+    # Get the request data to update
+    data = request.get_json()
+
+
     # Check if the ticket is already checked in
-    if ticket.isCheckedIn:
+    if ticket.isCheckedIn and 'isCheckedIn' not in data:
         return jsonify({
             "code": 409,
             "data": {"ticketID": ticketID},
             "message": "Ticket is already checked in and cannot be modified."
         }), 409
-
-    # Get the request data to update
-    data = request.get_json()
 
     # Validate resalePrice if present in the request
     if 'resalePrice' in data:
@@ -365,7 +369,7 @@ def create_ticket(ticketID):
                            "price",
                            "resalePrice",
                            "status",
-                           "chargeID",
+                           "paymentID",
                            "isCheckedIn"] #ticketID in url
         if any(field not in data for field in required_fields):
             return jsonify({
@@ -416,10 +420,12 @@ def create_ticket(ticketID):
         }), 201
 
     except Exception as e:
+        import traceback
+        traceback.print_exc()  # Logs full stack trace
         return jsonify({
             "code": 500,
             "data": {"ticketID": ticketID},
-            "message": "An error occurred creating the ticket."
+            "message": f"An error occurred creating the ticket: {str(e)}"
         }), 500
 
 @app.route('/ticket', methods=['GET'])
