@@ -1,6 +1,6 @@
 const ticketServiceBaseUrl = 'http://localhost:5004'; // Port for ticket service
 const placeholderImage = 'assets/images/placeholder-event.png'; // Default image
-
+const checkInServiceBaseUrl = 'http://localhost:5103'; // now points to check_in_ticket.py
 const app = Vue.createApp({
     data() {
         return {
@@ -134,7 +134,7 @@ const app = Vue.createApp({
 
             try {
                 // 3. Call generateQR endpoint (POST)
-                const response = await fetch(`${ticketServiceBaseUrl}/generateQR/${this.selectedTicketId}`, {
+                const response = await fetch(`${checkInServiceBaseUrl}/generateQR/${this.selectedTicketId}`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${this.token}`,
