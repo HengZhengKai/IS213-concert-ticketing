@@ -447,13 +447,13 @@ def get_all_tickets():
             "message": f"Error retrieving tickets: {str(e)}"
         }), 500
 
-# === QR Code Generation Endpoint (Simplified for Debugging) ===
-@app.route('/generateQR/<string:ticketID>', methods=['POST'])
-def generate_qr_code(ticketID):
-    logger.info(f"[DEBUG] Accessed simplified /generateQR route for ticketID: {ticketID}")
-    # Just return a simple success message to test route registration
-    return jsonify({"message": "QR Route OK"}), 200
-# === End Simplified Route ===
+# # === QR Code Generation Endpoint (Simplified for Debugging) ===
+# @app.route('/generateQR/<string:ticketID>', methods=['POST'])
+# def generate_qr_code(ticketID):
+#     logger.info(f"[DEBUG] Accessed simplified /generateQR route for ticketID: {ticketID}")
+#     # Just return a simple success message to test route registration
+#     return jsonify({"message": "QR Route OK"}), 200
+# # === End Simplified Route ===
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5004, debug=True)
