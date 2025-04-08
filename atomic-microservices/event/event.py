@@ -92,15 +92,6 @@ class EventDate(db.Document): # tell flask what are the fields in your database
 #Route 1
 @app.route("/event")
 def get_all_events():
-    """
-    Get all events
-    ---
-    responses:
-        200:
-            description: List of all events
-        404:
-            description: No events found
-    """
     try:
         events = Event.objects()  # Fetch all events
         logger.info(f"Found {len(events)} events")
@@ -172,22 +163,6 @@ def get_all_events():
 #Route 2
 @app.route("/event/<string:eventID>")
 def select_event(eventID):
-    """
-    Get details of a specific event
-    ---
-    parameters:
-        - name: eventID
-        in: path
-        type: string
-        required: true
-        description: The ID of the event
-    responses:
-        200:
-            description: Event details
-        404:
-            description: Event not found
-    """
-    
     try:
         event = Event.objects(eventID=eventID).first()
 
@@ -229,28 +204,6 @@ def select_event(eventID):
 #Route 3
 @app.route("/event/<string:eventID>/<string:eventDateTime>")
 def select_event_date(eventID, eventDateTime):
-    """
-    Get details of a specific event date
-    ---
-    parameters:
-        - name: eventID
-            in: path
-            type: string
-            required: true
-            description: The ID of the event
-        - name: eventDateTime
-            in: path
-            type: string
-            required: true
-            description: The date and time of the event
-        responses:
-        200:
-            description: Event date details
-        400:
-            description: Invalid date format
-        404:
-            description: Event or event date not found
-    """
     # Convert eventDateTime string to datetime object
     try:
         try:
@@ -301,37 +254,6 @@ def select_event_date(eventID, eventDateTime):
 #Route 4
 @app.route("/event/<string:eventID>/<string:eventDateTime>", methods = ["PUT"])
 def update_event(eventID, eventDateTime):
-    """
-    Update available seats for a specific event date
-    ---
-    parameters:
-        - name: eventID
-            in: path
-            type: string
-            required: true
-            description: The ID of the event
-        - name: eventDateTime
-            in: path
-            type: string
-            required: true
-            description: The date and time of the event
-        - name: body
-            in: body
-            required: true
-            schema:
-            type: object
-            properties:
-                availableSeats:
-                type: integer
-                description: The number of available seats for this event date
-        responses:
-        200:
-            description: Successfully updated available seats
-        400:
-            description: Bad request (Invalid or missing parameters)
-        404:
-            description: Event or event date not found
-    """
     try:
         # Convert eventDateTime string to datetime object
         try:
@@ -476,23 +398,3 @@ def detailed_diagnostic():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
-
-# # @app.route("/event/<string:eventID>")
-# # def get_event(eventID):
-# #     '''return details of selected event'''
-# #     event = Event.objects(eventID=eventID).first()  # MongoEngine query
-
-# #     if event:
-# #         return jsonify(
-# #             {
-# #                 "code": 200,
-# #                 "data": event.to_json()  # Use `to_json()` method of event class
-# #             }
-# #         )
-    
-# #     return jsonify(
-# #         {
-# #             "code": 404,
-# #             "message": "Event not found."
-# #         }
-# #     ), 404
