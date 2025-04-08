@@ -7,52 +7,65 @@ const myTicketsApp = Vue.createApp({
       };
     },
     created() {
-      const sessionUser = sessionStorage.getItem("user");
-  
-      if (!sessionUser) {
-        alert("You are not logged in.");
-        window.location.href = "login.html";
-        return;
-      }
-  
-      const user = JSON.parse(sessionUser);
-      const ownerID = user.email; // ✅ Use email as the ownerID
+        const sessionUser = sessionStorage.getItem("user");
       
-      const sessionId = new URLSearchParams(window.location.search).get("session_id");
-  if (sessionId) {
-    // Call your Flask backend to verify and possibly store the booking
-    fetch(`http://localhost:5007/verify-payment?session_id=${sessionId}`)
-      .then(res => res.json())
-      .then(data => {
-        if (data.payment_intent_id) {
-          alert("Payment Verified!")
-          console.log(" Verified Payment:", data);
-
-        } else {
-          console.warn("Payment session verification failed.");
+        if (!sessionUser) {
+          alert("You are not logged in.");
+          window.location.href = "login.html";
+          return;
         }
-      })
-      .catch(err => {
-        console.error("Error verifying payment:", err);
-      });
-  }
-      this.fetchTickets(ownerID);
+      
+        const user = JSON.parse(sessionUser);
+        const ownerID = user.userID;
+      
+        const sessionId = new URLSearchParams(window.location.search).get("session_id");
+        if (sessionId) {
+          fetch(`http://localhost:5007/verify-payment?session_id=${sessionId}`)
+            .then(res => res.json())
+            .then(data => {
+              if (data.payment_intent_id) {
+                alert("Payment Verified!");
+                console.log("Verified Payment:", data);
+              } else {
+                console.warn("Payment session verification failed.");
+              }
+            })
+            .catch(err => {
+              console.error("Error verifying payment:", err);
+            });
+        }
+      
+        // ✅ Call with both ticket and waitlist userIDs
+        this.fetchTickets(user.userID, user.userID);
+      
+      
     },
     methods: {
-      async fetchTickets(ownerID) {
+      async fetchTickets(ownerID, waitlistUserID) {
         try {
-          const [confirmedRes, waitlistRes] = await Promise.all([
+          const [ticketRes, waitlistRes] = await Promise.all([
             fetch(`http://localhost:5004/tickets/${ownerID}`),
-            fetch(`http://localhost:5003/waitlist/user/${ownerID}`)
+            fetch(`http://localhost:5003/waitlist/user/${waitlistUserID}`)
           ]);
-  
-          const confirmedData = await confirmedRes.json();
+      
+          const ticketData = await ticketRes.json();
           const waitlistData = await waitlistRes.json();
-  
-          if (confirmedData.code === 200) {
-            this.confirmedTickets = confirmedData.data;
+      
+          if (ticketData.code === 200) {
+            const allTickets = ticketData.data.tickets;
+            console.log("✅ All Tickets:", allTickets); // Debug output
+      
+            this.confirmedTickets = allTickets.map(ticket => ({
+              ticketID: ticket.ticketID,
+              eventName: ticket.eventName,
+              eventDateTime: ticket.eventDateTime,
+              seatNo: ticket.seatNo,
+              seatCategory: ticket.seatCategory,
+              status: ticket.status,
+              isCheckedIn: ticket.isCheckedIn
+            }));
           }
-  
+      
           if (waitlistData.code === 200) {
             this.waitlistedEvents = waitlistData.data.waitlist;
           }
