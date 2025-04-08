@@ -207,7 +207,8 @@ def select_event_date(eventID, eventDateTime):
     # Convert eventDateTime string to datetime object
     try:
         try:
-            event_date_obj = datetime.fromisoformat(eventDateTime)
+            decoded_dt = urllib.parse.unquote(eventDateTime)
+            event_date_obj = datetime.fromisoformat(decoded_dt)
         except ValueError:
             return jsonify(
                 {
@@ -257,7 +258,8 @@ def update_event(eventID, eventDateTime):
     try:
         # Convert eventDateTime string to datetime object
         try:
-            event_date_obj = datetime.fromisoformat(eventDateTime)
+            decoded_dt = urllib.parse.unquote(eventDateTime)
+            event_date_obj = datetime.fromisoformat(decoded_dt)
         except ValueError:
             return jsonify(
                 {
