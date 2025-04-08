@@ -236,17 +236,6 @@ def select_event_date(eventID, eventDateTime):
 @app.route("/event/<string:eventID>/<string:eventDateTime>", methods = ["PUT"])
 def update_event(eventID, eventDateTime):
     try:
-        # Convert eventDateTime string to datetime object
-        try:
-            decoded_dt = urllib.parse.unquote(eventDateTime)
-            event_date_obj = datetime.fromisoformat(decoded_dt)
-        except ValueError:
-            return jsonify(
-                {
-                    "code": 400,
-                    "message": "Invalid date format. Use ISO format: YYYY-MM-DDTHH:MM:SS"
-                }
-            ), 400
 
         # Find the Event document
         event = Event.objects(eventID=eventID).first()
