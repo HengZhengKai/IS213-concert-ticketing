@@ -12,7 +12,7 @@ app = Flask(__name__)
 
 CORS(app)
 
-rabbitmq_host = os.getenv("RABBITMQ_HOST", "localhost")
+rabbitmq_host = os.getenv("RABBITMQ_HOST", "rabbitmq")
 credentials = pika.PlainCredentials('guest', 'guest')
 
 for attempt in range(5):

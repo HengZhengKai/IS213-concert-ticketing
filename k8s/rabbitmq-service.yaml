@@ -24,6 +24,8 @@ spec:
               value: guest
             - name: RABBITMQ_DEFAULT_PASS
               value: guest
+            - name: RABBITMQ_HOST
+              value: "rabbitmq"
           volumeMounts:
             - name: rabbitmq-data
               mountPath: /var/lib/rabbitmq

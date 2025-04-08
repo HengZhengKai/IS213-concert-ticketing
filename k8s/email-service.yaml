@@ -19,7 +19,7 @@ spec:
         imagePullPolicy: IfNotPresent
         ports:
         - containerPort: 5008
-        command: ["python", "./email-service.py"]
+        command: ["python", "./email_service.py"]
         env:
           - name: RABBITMQ_HOST
             value: rabbitmq

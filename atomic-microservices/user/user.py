@@ -3,6 +3,7 @@ from flask_cors import CORS
 import mongoengine as db
 from os import environ
 import os
+import re
 from datetime import datetime, timedelta
 import urllib.parse
 import logging
@@ -43,10 +44,19 @@ try:
 except Exception as e:
     logger.error(f"Failed to connect to MongoDB: {e}")
 
-RABBITMQ_HOST = os.getenv('RABBITMQ_HOST')
-RABBITMQ_PORT = int(os.getenv('RABBITMQ_PORT'))
-RABBITMQ_USER = os.getenv('RABBITMQ_USER')
-RABBITMQ_PASS = os.getenv('RABBITMQ_PASS')
+# Get RabbitMQ host and URI
+RABBITMQ_HOST = os.getenv('RABBITMQ_HOST', 'localhost')
+RABBITMQ_URI = os.getenv('RABBITMQ_PORT', 'tcp://localhost:5672')
+
+# Extract the port number from the URI
+match = re.search(r'tcp://.*:(\d+)', RABBITMQ_URI)
+if match:
+    RABBITMQ_PORT = int(match.group(1))  # Extracted port
+else:
+    RABBITMQ_PORT = 5672  # Default fallback port
+    
+RABBITMQ_USER = os.getenv('RABBITMQ_USER', 'guest')
+RABBITMQ_PASS = os.getenv('RABBITMQ_PASS', 'guest')
 
 def publish_to_rabbitmq(routing_key, message):
     try:

@@ -35,6 +35,8 @@ spec:
               port: 8001
             initialDelaySeconds: 10
             periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
       volumes:
         - name: kong-config-volume
           configMap:
