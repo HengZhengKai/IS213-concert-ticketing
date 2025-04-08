@@ -38,18 +38,14 @@ except Exception as e:
     logger.error(f"Failed to connect to MongoDB: {e}")
 
 class Event(db.Document): # tell flask what are the fields in your database
-    eventID = db.StringField(primary_key = True)
+    eventID = db.StringField(required = True)
     eventName = db.StringField(required=True)
     imageBase64 = db.StringField()
     venue = db.StringField(required=True)
     description = db.StringField()
     totalSeats = db.IntField(required=True)
 
-    meta = {'collection': 'Event',
-            'indexes': [
-            {'fields': ['eventID'], 'unique': True}
-        ]
-    } 
+    meta = {'collection': 'Event'} 
 
     def to_json(self):
         return {
@@ -64,6 +60,7 @@ class Event(db.Document): # tell flask what are the fields in your database
 class EventDate(db.Document): # tell flask what are the fields in your database
     # eventID = db.StringField(required=True)  # Links to Event
     event = db.ReferenceField('Event', required=True, dbref=True, reverse_delete_rule=db.CASCADE)  # Link to Event
+    eventDateID = db.StringField()
     eventID = db.StringField()
     eventDateTime = db.DateTimeField(required=True)
     availableSeats = db.IntField()
@@ -71,14 +68,13 @@ class EventDate(db.Document): # tell flask what are the fields in your database
     meta = {
         'collection': 'EventDate', 
         'indexes': [
-            {'fields': ['event', 'eventDateTime'], 'unique': True},
-            {'fields': ['eventID']}
+            {'fields': ['event', 'eventDateID'], 'unique': True},
         ]
     }
 
     def to_json(self):
         return {
-            "event": self.event.eventID,
+            "eventDateID": self.eventDateID,
             "eventDateTime": self.eventDateTime.isoformat() if self.eventDateTime else None,
             "availableSeats": self.availableSeats
         }
@@ -102,11 +98,11 @@ def get_all_events():
             for event in events:
                 logger.info(f"Processing Event: {event.eventID}, Name: {event.eventName}")
 
-                #retrieve event dates by matching eventID in event microservice
-                event_dates= EventDate.objects(eventID=event.eventID)
+                # Retrieve event dates by using the reference field
+                event_dates = EventDate.objects(eventID=event.eventID)  # Corrected query
                 
                 # Log the number of dates for this event
-                logger.info(f"Dates by ID for {event.eventID}: {len(event_dates)}")
+                logger.info(f"Dates for {event.eventID}: {len(event_dates)}")
                 
                 # Process each event
                 event_info = {
@@ -125,13 +121,13 @@ def get_all_events():
                     #     "eventDateTime": date.eventDateTime.isoformat() if date.eventDateTime else None,
                     #     "availableSeats": date.availableSeats or 0
                     # })
-                    if date.eventDateTime:
-                        sgt_time = date.eventDateTime.replace(tzinfo=pytz.UTC).astimezone(pytz.timezone('Asia/Singapore'))
-                        event_info["dates"].append({
-                            "eventDateTime": sgt_time.isoformat(),
-                            "availableSeats": date.availableSeats or 0,
-                            "formattedDateTime": sgt_time.strftime("%d %B %Y at %I:%M %p SGT")
-                        })
+                    sgt_time = date.eventDateTime.replace(tzinfo=pytz.UTC).astimezone(pytz.timezone('Asia/Singapore'))
+                    event_info["dates"].append({
+                        "eventDateID": date.eventDateID,
+                        "eventDateTime": sgt_time.isoformat(),
+                        "availableSeats": date.availableSeats or 0,
+                        "formattedDateTime": sgt_time.strftime("%d %B %Y at %I:%M %p SGT")
+                    })
                 
                 event_data.append(event_info)
             
@@ -163,19 +159,17 @@ def get_all_events():
 #Route 2
 @app.route("/event/<string:eventID>")
 def select_event(eventID):
+    print(f"[DEBUG] /event/{eventID} called")
     try:
         event = Event.objects(eventID=eventID).first()
 
         if not event:
-            return jsonify(
-                {
-                    "code": 404,
-                    "message": f"Event with eventID {eventID} not found."
-                }
-            ), 404
-
-    # Fetch associated event dates
-        event_dates = EventDate.objects(event=event)
+            return jsonify({"code": 404, "message": "Event not found"}), 404
+        
+        event_id = event.eventID
+        event_dates = EventDate.objects(eventID=event_id)
+        print(event_id)
+        print(event_dates)
 
         return jsonify(
             {
@@ -187,35 +181,20 @@ def select_event(eventID):
                     "venue": event.venue,
                     "description": event.description,
                     "totalSeats": event.totalSeats,
-                    "dates": [date.to_json() for date in event_dates]  # Convert dates to JSON
+                    "dates": [date.to_json() for date in event_dates]
                 }
             }
         )
-    
     except Exception as e:
-        logger.error(f"Error in select_event: {e}")
-        return jsonify(
-            {
-                "code": 500,
-                "message": f"Internal server error: {str(e)}"
-            }
-        ), 500
+        return jsonify({"code": 500, "message": str(e)}), 500
+    
 
 #Route 3
 @app.route("/event/<string:eventID>/<string:eventDateTime>")
 def select_event_date(eventID, eventDateTime):
     # Convert eventDateTime string to datetime object
     try:
-        try:
-            decoded_dt = urllib.parse.unquote(eventDateTime)
-            event_date_obj = datetime.fromisoformat(decoded_dt)
-        except ValueError:
-            return jsonify(
-                {
-                    "code": 400,
-                    "message": "Invalid date format. Use ISO format: YYYY-MM-DDTHH:MM:SS"
-                }
-            ), 400
+        event_date_obj = eventDateTime
 
         # Find the Event document
         event = Event.objects(eventID=eventID).first()
@@ -228,12 +207,13 @@ def select_event_date(eventID, eventDateTime):
             ), 404
 
         # Find the specific EventDate
-        event_date = EventDate.objects(event=event, eventDateTime=event_date_obj).first()
+        event_date = EventDate.objects(eventID=eventID, eventDateTime=event_date_obj).first()
+
         if not event_date:
             return jsonify(
                 {
                     "code": 404,
-                    "message": f"No event date found for eventID {eventID} on {eventDateTime}."
+                    "message": f"No event date found for eventID {eventID} on {eventDateTime}. Your query was transformed to {event_date_obj}",
                 }
             ), 404
 
