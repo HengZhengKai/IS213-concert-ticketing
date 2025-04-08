@@ -131,6 +131,7 @@
                    <p><strong>Date:</strong> <span class="concert-date">{{ formatDateTime(ticket.eventDateTime) }}</span></p>
                    <p><strong>Seat:</strong> <span class="seat-number">{{ ticket.seatNo }}</span></p>
                    <p><strong>Status:</strong> <span class="check-in-status">{{ ticket.isCheckedIn ? 'Checked In' : 'Not Checked In' }}</span></p>
+                   <p><strong>Ticket ID:</strong> <span class="ticket-id">{{ ticket.ticketID }}</span></p>
                  </div>
                  <button 
                     class="btn check-in-btn" 

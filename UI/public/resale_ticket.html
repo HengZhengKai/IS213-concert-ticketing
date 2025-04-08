@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+  <title>Resale Tickets | Concerts</title>
+  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <!-- Bootstrap core CSS -->
+  <link href="vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Additional CSS Files -->
+  <link rel="stylesheet" href="assets/css/fontawesome.css">
+  <link rel="stylesheet" href="assets/css/templatemo-villa-agency.css">
+  <link rel="stylesheet" href="assets/css/owl.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+  <link rel="stylesheet" href="https://unpkg.com/swiper@7/swiper-bundle.min.css" />
+  <!-- Vue 3 -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+
+  <style>
+    /* body { padding-top: 80px; } */ /* Let template CSS handle padding */
+    .form-section {
+      background-color: #fff;
+      padding: 30px;
+      border-radius: 8px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+      margin-bottom: 30px;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header Area Start (Should be sticky via template CSS) -->
+  <header class="header-area header-sticky">
+    <div class="container">
+      <div class="row">
+        <div class="col-12">
+          <nav class="main-nav">
+            <a href="index.html" class="logo">
+              <h1>
+                <span>
+                  <inline>Events</inline>
+                </span>
+              </h1>
+            </a>
+            <ul class="nav">
+              <li><a href="index.html">Buy Ticket</a></li>
+              <li><a href="check_in.html">Check In</a></li>
+              <li><a href="resale_ticket.html" class="active">Resale</a></li>
+              <li id="profileLink">
+                <a href="profile.html" id="profileLinkRedir">
+                  <i class="fa fa-user" id="profileLinkImg"></i>
+                  <span id="profileLinkText">Profile</span>
+                </a>
+              </li>
+            </ul>
+            <a class="menu-trigger"><span>Menu</span></a>
+          </nav>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Area -->
+  <div id="resaleApp" class="container mt-5 pt-5"> 
+    <h2 class="text-center mb-5">Ticket Resale</h2>
+
+    <!-- Seller Section -->
+    <div class="row justify-content-center">
+        <div class="col-md-8"> <!-- Wider column -->
+            <div class="form-section">
+                <h4 class="mb-3 text-center">Sell Your Tickets</h4>
+                
+                 <!-- Loading State -->
+                <div v-if="loading" class="text-center">
+                  <div class="spinner-border" role="status"></div> <p>Loading your tickets...</p>
+                </div>
+
+                <!-- Error Loading Tickets -->
+                <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
+
+                <!-- Display Resellable Tickets -->
+                <div v-else-if="resellableTickets.length > 0">
+                    <div v-for="ticket in resellableTickets" :key="ticket.ticketID" class="card mb-3">
+                        <div class="card-body">
+                            <h5 class="card-title">{{ ticket.eventName }}</h5>
+                            <p class="card-text">
+                                <strong>Ticket ID:</strong> {{ ticket.ticketID }}<br>
+                                <strong>Date:</strong> {{ formatDateTime(ticket.eventDateTime) }}<br>
+                                <strong>Seat:</strong> {{ ticket.seatNo }} ({{ ticket.seatCategory }})<br>
+                                <strong>Original Price:</strong> ${{ ticket.price?.toFixed(2) || 'N/A' }}
+                            </p>
+                            <div class="row g-2 align-items-center">
+                                <div class="col-sm-6">
+                                    <label :for="'resalePrice-' + ticket.ticketID" class="visually-hidden">Resale Price</label>
+                                    <div class="input-group">
+                                         <span class="input-group-text">$</span>
+                                        <input type="number" step="0.01" min="0" class="form-control" 
+                                               :id="'resalePrice-' + ticket.ticketID" 
+                                               placeholder="Enter Resale Price" 
+                                               v-model.number="resalePrices[ticket.ticketID]">
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <button type="button" class="btn btn-danger w-100" @click="listTicketForResale(ticket.ticketID)">
+                                        List for Resale
+                                    </button>
+                                </div>
+                            </div>
+                             <!-- Message Area for this specific ticket -->
+                            <div v-if="resaleMessages[ticket.ticketID]" class="alert mt-3 mb-0 py-2" 
+                                :class="resaleMessages[ticket.ticketID].type === 'success' ? 'alert-success' : 'alert-danger'" 
+                                role="alert">
+                                {{ resaleMessages[ticket.ticketID].text }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- No Resellable Tickets Message -->
+                <div v-else>
+                     <p class="text-center text-muted">You have no tickets available for resale.</p>
+                </div>
+                
+                <!-- Removed old single form -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Buyer Section (Placeholder for now) -->
+    <hr class="my-5">
+    <div class="row justify-content-center">
+         <div class="col-md-6">
+            <div class="form-section">
+                 <h4 class="mb-3 text-center">Buy Resale Ticket</h4>
+                <p class="text-center text-muted">(Buying functionality to be added)</p>
+                <!-- Buyer form will go here later -->
+            </div>
+        </div>
+    </div>
+
+  </div>
+
+  <!-- Scripts -->
+  <script src="vendor/jquery/jquery.min.js"></script>
+  <script src="vendor/bootstrap/js/bootstrap.min.js"></script>
+  <script src="static/login.js"></script> <!-- Needed for SessionManager -->
+  <!-- Vue App Script for Resale Page -->
+  <script defer src="static/resale_vue.js"></script> 
+  <script src="assets/js/isotope.min.js"></script>
+  <script src="assets/js/owl-carousel.js"></script>
+  <script src="assets/js/counter.js"></script>
+  <script src="assets/js/custom.js"></script> 
+
+</body>
+</html>
