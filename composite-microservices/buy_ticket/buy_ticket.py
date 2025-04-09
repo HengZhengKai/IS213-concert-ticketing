@@ -164,7 +164,6 @@ def process_buy_ticket(userID, eventName, eventID, eventDateTime, seatNo, seatCa
         ticketID = None
         for i in range(5):  # max 5 attempts
             temp_ticketID = "T" + str(uuid.uuid4())[:4]
-            logger.info(f"Attempt {i+1}: Creating ticket with ID {temp_ticketID}")
             
             ticket_data = {
                 "ownerID": userID,
@@ -180,15 +179,12 @@ def process_buy_ticket(userID, eventName, eventID, eventDateTime, seatNo, seatCa
                 "paymentID": paymentID,
                 "isCheckedIn": False  # Set to False for new tickets
             }
-            logger.info(f"Ticket data: {ticket_data}")
 
             try:
                 logger.info(f"Making request to ticket service: {ticket_URL}/{temp_ticketID}")
                 ticket_result = invoke_http(f"{ticket_URL}/{temp_ticketID}", method="POST", json=ticket_data)
-                logger.info(f"Ticket service response: {ticket_result}")
                 
                 if not isinstance(ticket_result, dict):
-                    logger.error(f"Invalid response type from ticket service: {type(ticket_result)}")
                     continue  # Try again with new ticketID
                 
                 if ticket_result.get("code") == 201:
@@ -203,7 +199,6 @@ def process_buy_ticket(userID, eventName, eventID, eventDateTime, seatNo, seatCa
                 continue  # Try again with new ticketID
 
         if ticketID is None:
-            logger.error("Failed to create ticket after multiple attempts")
             return {
                 "code": 500,
                 "message": "Failed to create ticket after multiple attempts."
