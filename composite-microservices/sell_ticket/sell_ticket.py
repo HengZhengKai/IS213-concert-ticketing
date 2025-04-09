@@ -10,8 +10,8 @@ app = Flask(__name__)
 
 CORS(app)
 
-waitlist_URL = "http://localhost:5003/waitlist"
-ticket_URL = "http://localhost:5004"
+waitlist_URL = "http://kong:8000/waitlist"
+ticket_URL = "http://kong:8000"
 user_URL = "http://localhost:5006/user"
 email_URL = "http://localhost:5008/email"
 celery_URL = "http://localhost:5009/send_waitlist_emails"
@@ -50,7 +50,8 @@ def process_sell_ticket(ticket):
     try:
         # Step 2-3. Update ticket resalePrice and status
         print('\n-----Invoking ticket microservice-----')
-        ticket_result = invoke_http(f"{ticket_URL}/ticket/{ticket['ticketID']}", method='PUT', json={"resalePrice": ticket["resalePrice"], "status": "available"})
+        json_body={"resalePrice": ticket["resalePrice"], "status": "available"}
+        ticket_result = invoke_http(f"{ticket_URL}/ticket/{ticket['ticketID']}", method='PUT', json=json_body)
 
         # Check the ticket result; if a failure, do error handling.
         code = ticket_result["code"]
@@ -63,13 +64,14 @@ def process_sell_ticket(ticket):
             else:
                 return {
                     "code": 500,
-                    "message": f"Ticket update failure, status code: {code}",
+                    "message": f"Ticket update failure, {ticket["ticketID"]} status code: {code} \n PUT URL: {ticket_URL}/ticket/{ticket['ticketID']} \n body: {json_body}",
+                    "ticket_message": ticket_result["message"]
                 }
 
         # Step 4-5. Query eventID and eventDateTime
         print('\n-----Querying ticket microservice-----')
         query = """
-        query {
+        query($ticketID: String!) {
             eventDetails(ticketID: $ticketID) {
                 eventID
                 eventName
@@ -84,11 +86,11 @@ def process_sell_ticket(ticket):
         if response.status_code != 200:
             return {
                 "code": 500,
-                "message": f"Failed to query event details, status code: {response.status_code}"
+                "message": f"Failed to query event details, status code: {response.status_code}",
             }
 
         event_data = response.json()
-
+    
         if "data" in event_data and event_data["data"]["eventDetails"]:
             eventID = event_data["data"]["eventDetails"]["eventID"]
             eventName = event_data["data"]["eventDetails"]["eventName"]
@@ -97,13 +99,20 @@ def process_sell_ticket(ticket):
             print("Error: Could not retrieve event details")
             return {"code": 500, "message": "Event details not found or invalid response from ticket service."}
 
+
         # Step 6-7. Get waitlist users
         print('\n-----Invoking waitlist microservice-----')
-        waitlist_users = invoke_http(f"{waitlist_URL}/waitlist/{eventID}/{eventDateTime}")
+        waitlist_users = invoke_http(f"{waitlist_URL}/{eventID}/{eventDateTime}")
 
-        if not waitlist_users:
-            print("No users on waitlist.")
-            return {'code': 404, 'message': 'No users on waitlist.'}
+    
+        if waitlist_users["data"]["waitlist"] == []:
+            return{'code': 201,
+                    "data": {
+                    "ticketID": ticket["ticketID"],
+                    "resalePrice": ticket["resalePrice"]
+                },
+                "message": "Ticket up for resale. No users on waitlist at the moment."
+            }
 
         # Step 8: Email all waitlist users
         payload = {
@@ -130,7 +139,7 @@ def process_sell_ticket(ticket):
                 "ticketID": ticket["ticketID"],
                 "resalePrice": ticket["resalePrice"]
             },
-            "message": "Ticket up for resale."
+            "message": "Ticket up for resale. Users on waitlist have been notified."
         }
 
     except Exception as e:

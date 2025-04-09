@@ -65,9 +65,6 @@ def get_waitlist(eventID, eventDateTime):
     '''get all users in waitlist'''
     event_waitlist = Waitlist.objects(eventID=eventID, eventDateTime=eventDateTime).only("userID", "waitlistDate")
     
-    if not event_waitlist:
-        return jsonify({"code": 404, "message": "No users on waitlist."}), 404
-    
     return jsonify({
         "code": 200,
         "data": {

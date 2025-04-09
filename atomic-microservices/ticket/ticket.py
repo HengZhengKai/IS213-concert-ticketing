@@ -311,7 +311,7 @@ def update_ticket(ticketID):
 
     # If the status is being updated, check for conflicts
     if 'status' in data:
-        if data['status'] == ticket.status:
+        if data['status'] == ticket.status and ticket.status == "paid":
             return jsonify({
                 "code": 409,
                 "data": {"ticketID": ticketID},
