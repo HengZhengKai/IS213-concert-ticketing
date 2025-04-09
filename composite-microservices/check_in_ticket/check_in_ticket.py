@@ -1,7 +1,7 @@
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, send_file, make_response
 from flask_cors import CORS
 import os, sys
-import qrcode
+import segno
 import uuid
 import requests
 from io import BytesIO
@@ -13,15 +13,7 @@ hostname = socket.gethostname()
 local_ip = socket.gethostbyname(hostname)
 
 app = Flask(__name__)
-
-CORS(app, supports_credentials=True, resources={r"/*": {"origins": "http://localhost:8080"}})
-
-@app.after_request
-def after_request(response):
-    response.headers.add('Access-Control-Allow-Origin', 'http://localhost:8080')
-    response.headers.add('Access-Control-Allow-Headers', 'Content-Type,Authorization')
-    response.headers.add('Access-Control-Allow-Methods', 'GET,POST,OPTIONS')
-    return response
+CORS(app)  # Simple CORS configuration allowing all origins
 
 ticket_URL = "http://localhost:5004/ticket"
 
@@ -43,22 +35,33 @@ def is_ticket_checked_in(ticketID):
 
 @app.route('/generateqr/<string:ticketID>', methods=['POST', 'OPTIONS'])
 def generate_qr_code(ticketID):
-    # Use current local IP to construct full scan URL
-    scan_url = f"http://{local_ip}:5103/scanqr/{ticketID}"
+    try:
+        if request.method == 'OPTIONS':
+            response = make_response()
+            response.headers.add('Access-Control-Allow-Origin', '*')
+            response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+            return response
 
-    # Generate QR code
-    qr = qrcode.QRCode(version=1, box_size=10, border=5)
-    qr.add_data(scan_url)
-    qr.make(fit=True)
+        # Use current local IP to construct full scan URL
+        scan_url = f"http://{local_ip}:5103/scanqr/{ticketID}"
 
-    img = qr.make_image(fill="black", back_color="white")
+        # Generate QR code using segno
+        qr = segno.make(scan_url)
+        
+        # Create a BytesIO object to store the PNG data
+        img_io = BytesIO()
+        qr.save(img_io, kind='png', scale=10)  # Scale up for better visibility
+        img_io.seek(0)
 
-    # Save QR code to an in-memory file
-    img_io = BytesIO()
-    img.save(img_io, 'PNG')
-    img_io.seek(0)
-
-    return send_file(img_io, mimetype='image/png')
+        response = make_response(send_file(img_io, mimetype='image/png'))
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response
+        
+    except Exception as e:
+        print(f"Error generating QR code: {str(e)}")
+        response = jsonify({"error": str(e)})
+        response.headers['Access-Control-Allow-Origin'] = '*'
+        return response, 500
 
 @app.route("/scanqr/<string:ticketID>", methods=['GET', 'POST'])
 def on_qr_scanned(ticketID):
