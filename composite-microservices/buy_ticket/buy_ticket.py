@@ -30,20 +30,59 @@ email_URL = f"{base_url}/email"
 
 logger = logging.getLogger(__name__)
 
-for attempt in range(5):
-    try:
-        print(f"Connecting to RabbitMQ at {rabbitmq_host} (Attempt {attempt + 1})...")
-        parameters = pika.ConnectionParameters(host=rabbitmq_host, credentials=credentials)
-        connection = pika.BlockingConnection(parameters)
-        channel = connection.channel()
-        print("Successfully connected to RabbitMQ.")
-        break
-    except pika.exceptions.AMQPConnectionError as e:
-        print(f"Connection failed: {e}")
-        time.sleep(5)
-else:
+def get_rabbitmq_connection():
+    """Get a RabbitMQ connection with retry logic"""
+    for attempt in range(5):
+        try:
+            logger.info(f"Connecting to RabbitMQ at {rabbitmq_host} (Attempt {attempt + 1})...")
+            parameters = pika.ConnectionParameters(
+                host=rabbitmq_host,
+                credentials=credentials,
+                connection_attempts=3,
+                retry_delay=5,
+                heartbeat=600,
+                blocked_connection_timeout=300
+            )
+            connection = pika.BlockingConnection(parameters)
+            channel = connection.channel()
+            logger.info("Successfully connected to RabbitMQ.")
+            return connection, channel
+        except pika.exceptions.AMQPConnectionError as e:
+            logger.error(f"Connection failed: {e}")
+            if attempt < 4:  # Don't sleep on the last attempt
+                time.sleep(5)
     raise Exception("Could not connect to RabbitMQ after multiple attempts.")
-    exit(1)
+
+# Initialize RabbitMQ connection
+connection, channel = get_rabbitmq_connection()
+
+def ensure_rabbitmq_connection():
+    """Ensure RabbitMQ connection is active, reconnect if necessary"""
+    global connection, channel
+    try:
+        if not connection or connection.is_closed:
+            logger.warning("RabbitMQ connection lost, attempting to reconnect...")
+            connection, channel = get_rabbitmq_connection()
+    except Exception as e:
+        logger.error(f"Error checking RabbitMQ connection: {e}")
+        connection, channel = get_rabbitmq_connection()
+
+def publish_to_rabbitmq(exchange, routing_key, body):
+    """Publish message to RabbitMQ with connection handling"""
+    try:
+        ensure_rabbitmq_connection()
+        channel.basic_publish(
+            exchange=exchange,
+            routing_key=routing_key,
+            body=json.dumps(body),
+            properties=pika.BasicProperties(
+                delivery_mode=2,  # make message persistent
+            )
+        )
+        logger.info(f"Successfully published message to {exchange} with routing key {routing_key}")
+    except Exception as e:
+        logger.error(f"Error publishing to RabbitMQ: {e}")
+        raise
 
 #app route: http://localhost:5100/buyticket
 @app.route("/buyticket", methods=['POST'])
@@ -241,11 +280,16 @@ def process_buy_ticket(userID, eventName, eventID, eventDateTime, seatNo, seatCa
             "price": price
         }
 
-        channel.basic_publish(
-            exchange="ticketing",
-            routing_key="ticket.purchased",
-            body=json.dumps(payload)
-        )
+        try:
+            publish_to_rabbitmq(
+                exchange="ticketing",
+                routing_key="ticket.purchased",
+                body=payload
+            )
+        except Exception as e:
+            logger.error(f"Failed to publish email notification: {e}")
+            # Don't fail the whole transaction if email fails
+            pass
 
         return {
             "code": 201,

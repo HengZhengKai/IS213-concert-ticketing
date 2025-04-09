@@ -185,10 +185,10 @@ def declare_queues():
     global rabbitmq_channel
     
     queue_bindings = {
-        'email.ticket.purchase': ['ticket.purchased', 'payment.successful'],
+        'email.ticket.purchase': ['ticket.purchased'],  # Only ticket purchase events
         'email.ticket.resale': ['ticket.resold'],
         'email.ticket.checkin': ['ticket.checkedin'],
-        'email.payment.confirmation': ['payment.successful'],
+        'email.payment.confirmation': ['payment.successful'],  # Only payment confirmation events
         'email.waitlist.notification': ['waitlist.available'],
     }
     
