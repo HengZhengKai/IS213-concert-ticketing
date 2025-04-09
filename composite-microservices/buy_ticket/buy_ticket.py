@@ -30,13 +30,13 @@ else:
     raise Exception("Could not connect to RabbitMQ after multiple attempts.")
     exit(1)
 
-event_URL = "http://localhost:5001/event"
-seat_URL = "http://localhost:5002/seat"
-ticket_URL = "http://localhost:5004/"
-transaction_URL = "http://localhost:5005/transaction"
-user_URL = "http://localhost:5006/user"
-payment_URL = "http://localhost:5007/payment"
-email_URL = "http://localhost:5008/email"
+event_URL = "http://kong:8000/event"
+seat_URL = "http://kong:8000/seat"
+ticket_URL = "http://kong:8000"
+transaction_URL = "http://kong:8000/transaction"
+user_URL = "http://kong:8000/user"
+payment_URL = "http://kong:8000/payment"
+email_URL = "http://kong:8000/email"
 
 #app route: http://localhost:5100/buyticket
 @app.route("/buyticket", methods=['POST'])

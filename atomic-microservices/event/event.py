@@ -26,8 +26,8 @@ password = urllib.parse.quote_plus(os.getenv("MONGO_PASSWORD"))
 cluster = os.getenv("MONGO_CLUSTER")
 database = os.getenv("MONGO_DATABASE")
 
-# Construct connection string
-MONGO_URI = f"mongodb+srv://{username}:{password}@{cluster}/{database}?retryWrites=true&w=majority&authSource=admin"
+# Use the MONGO_URI directly from environment if available, otherwise construct it
+MONGO_URI = os.getenv("MONGO_URI") or f"mongodb+srv://{username}:{password}@{cluster}/{database}?retryWrites=true&w=majority"
 
 try:
     # Connect to MongoDB Atlas
@@ -36,6 +36,7 @@ try:
     logger.info("Connected to MongoDB successfully")
 except Exception as e:
     logger.error(f"Failed to connect to MongoDB: {e}")
+    raise  # Re-raise the exception to prevent the service from starting with a bad connection
 
 class Event(db.Document): # tell flask what are the fields in your database
     eventID = db.StringField(required = True)
@@ -84,6 +85,16 @@ class EventDate(db.Document): # tell flask what are the fields in your database
         if self.event and not self.eventID:
             self.eventID = self.event.eventID
         super().save(*args, **kwargs)
+
+# Verify database connection after class definitions
+try:
+    if Event.objects.count() >= 0:
+        logger.info("Successfully verified database connection by querying events")
+    else:
+        logger.warning("Database connection verified but no events found")
+except Exception as e:
+    logger.error(f"Failed to verify database connection: {e}")
+    raise
 
 #Route 1
 @app.route("/event")
@@ -193,9 +204,12 @@ def select_event(eventID):
 @app.route("/event/<string:eventID>/<string:eventDateTime>")
 def select_event_date(eventID, eventDateTime):
     try:
+        logger.info(f"Searching for event date with eventID: {eventID} and eventDateTime: {eventDateTime}")
+        
         # Find the Event document
         event = Event.objects(eventID=eventID).first()
         if not event:
+            logger.warning(f"Event with eventID {eventID} not found")
             return jsonify(
                 {
                     "code": 404,
@@ -203,10 +217,30 @@ def select_event_date(eventID, eventDateTime):
                 }
             ), 404
 
+        # Log all event dates for this event
+        all_dates = EventDate.objects(eventID=eventID)
+        logger.info(f"Found {len(all_dates)} dates for event {eventID}")
+        for date in all_dates:
+            logger.info(f"Available date: {date.eventDateTime.isoformat() if date.eventDateTime else None}")
+
+        # Parse the input datetime string
+        try:
+            search_datetime = datetime.fromisoformat(eventDateTime.replace('Z', '+00:00'))
+            logger.info(f"Parsed search datetime: {search_datetime.isoformat()}")
+        except ValueError as e:
+            logger.error(f"Error parsing datetime: {e}")
+            return jsonify(
+                {
+                    "code": 400,
+                    "message": f"Invalid datetime format: {eventDateTime}"
+                }
+            ), 400
+
         # Find the specific EventDate
-        event_date = EventDate.objects(eventID=eventID, eventDateTime=eventDateTime).first()
+        event_date = EventDate.objects(eventID=eventID, eventDateTime=search_datetime).first()
 
         if not event_date:
+            logger.warning(f"No event date found for eventID {eventID} on {search_datetime.isoformat()}")
             return jsonify(
                 {
                     "code": 404,
