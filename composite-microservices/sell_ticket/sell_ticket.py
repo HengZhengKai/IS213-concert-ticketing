@@ -119,6 +119,7 @@ def process_sell_ticket(ticket):
                 "event_id": eventID,
                 "event_name": eventName,
                 "event_date": eventDateTime,
+                
             }
         }
 
