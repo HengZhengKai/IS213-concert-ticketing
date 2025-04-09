@@ -325,7 +325,6 @@ def handle_ticket_purchase(ch, method, properties, body):
         if success:
             processed_messages.add(message_id)  # Mark message as processed
             ch.basic_ack(delivery_tag=method.delivery_tag)
-            logger.info(f"Ticket purchase email processed successfully for user {user_id}")
         else:
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
         
@@ -335,21 +334,16 @@ def handle_ticket_purchase(ch, method, properties, body):
 
 def handle_ticket_resale(ch, method, properties, body):
     """Handle ticket resale email"""
-    try:
-        logger.info(f"Received ticket resale message: {body}")
-        
+    try:        
         # Generate a unique message ID from the body
         message_id = hash(body)
         
         # Check if we've already processed this message
         if message_id in processed_messages:
-            logger.info("Duplicate message detected, acknowledging and skipping")
             ch.basic_ack(delivery_tag=method.delivery_tag)
             return
             
         data = json.loads(body)
-        logger.info(f"Processing ticket resale for buyer {data.get('buyer_id', 'Unknown')} and seller {data.get('seller_id', 'Unknown')}")
-        logger.info(f"Full message data: {json.dumps(data, indent=2)}")
         
         # Get required data
         buyer_id = data.get('buyer_id')
@@ -414,13 +408,8 @@ def handle_ticket_resale(ch, method, properties, body):
         </html>
         """
         
-        logger.info(f"Attempting to send email to buyer {buyer_email}")
         buyer_success = send_email(buyer_email, buyer_subject, buyer_html_content)
-        logger.info(f"Buyer email send result: {buyer_success}")
-        
-        logger.info(f"Attempting to send email to seller {seller_email}")
         seller_success = send_email(seller_email, seller_subject, seller_html_content)
-        logger.info(f"Seller email send result: {seller_success}")
         
         # Acknowledge or negative acknowledge based on email send results
         if buyer_success and seller_success:
@@ -437,20 +426,16 @@ def handle_ticket_resale(ch, method, properties, body):
 
 def handle_waitlist_notification(ch, method, properties, body):
     """Handle waitlist notification email"""
-    try:
-        print(f"[Email Service] Received waitlist notification message: {body}")
-        
+    try:        
         # Generate a unique message ID from the body
         message_id = hash(body)
         
         # Check if we've already processed this message
         if message_id in processed_messages:
-            print("[Email Service] Duplicate message detected, acknowledging and skipping")
             ch.basic_ack(delivery_tag=method.delivery_tag)
             return
             
         data = json.loads(body)
-        print(f"[Email Service] Processing waitlist notification for user {data.get('user_id', 'Unknown')}")
         
         # Get required data
         user_id = data.get('user_id')
@@ -458,15 +443,12 @@ def handle_waitlist_notification(ch, method, properties, body):
         event_name = data.get('event_name')
         event_date = data.get('event_date')
         
-        print(f"[Email Service] Fetching email for user {user_id}")
         # Get user email
         user_email = get_user_email(user_id)
         if not user_email:
-            print(f"[Email Service] No email address found for user {user_id}")
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
             return
         
-        print(f"[Email Service] Sending email to {user_email}")
         # Create email content
         subject = f"Ticket Available: {event_name}"
         
@@ -489,13 +471,10 @@ def handle_waitlist_notification(ch, method, properties, body):
         if success:
             processed_messages.add(message_id)  # Mark message as processed
             ch.basic_ack(delivery_tag=method.delivery_tag)
-            print(f"[Email Service] Email sent successfully to {user_email}")
         else:
             ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
-            print(f"[Email Service] Failed to send email to {user_email}")
         
     except Exception as e:
-        print(f"[Email Service] Error processing waitlist notification: {str(e)}")
         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
 def start_consuming():

@@ -16,6 +16,7 @@ app = Flask(__name__)
 CORS(app)  # Simple CORS configuration allowing all origins
 
 ticket_URL = "http://kong:8000/ticket"
+graphql_URL = "http://kong:8000/graphql"
 
 # Function to check if the ticket is checked in using GraphQL
 def is_ticket_checked_in(ticketID):
@@ -25,7 +26,7 @@ def is_ticket_checked_in(ticketID):
     }
     """
     variables = {"ticketID": ticketID}
-    response = requests.post(f"{ticket_URL}/graphql", json={'query': query, 'variables': variables})
+    response = requests.post(f"{graphql_URL}", json={'query': query, 'variables': variables})
     
     if response.status_code == 200:
         data = response.json()

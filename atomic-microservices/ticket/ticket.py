@@ -159,9 +159,8 @@ class Query(graphene.ObjectType):
     GraphQL Query class to fetch ticket details.
 
     Available Queries:
-    1. payment_id(ticketID: <string>): Returns the paymentID associated with a given ticket.
-    2. is_checked_in(ticketID: <string>): Returns the check-in status (Boolean) of a given ticket.
-    3. event_details(ticketID: <string>): Returns eventID and eventDateTime of a given ticket
+    1. is_checked_in(ticketID: <string>): Returns the check-in status (Boolean) of a given ticket.
+    2. event_details(ticketID: <string>): Returns eventID and eventDateTime of a given ticket
 
     Example Queries:
     ```
@@ -205,8 +204,24 @@ app.add_url_rule(
     view_func=GraphQLView.as_view('graphql', schema=schema, graphiql=True)
 )
 
-# === REST Endpoints ===
+# Route 1
+@app.route('/ticket', methods=['GET'])
+def get_all_tickets():
+    try:
+        tickets = Ticket.objects()
+        return jsonify({
+            "code": 200,
+            "data": {
+                "tickets": [ticket.to_json() for ticket in tickets]
+            }
+        })
+    except Exception as e:
+        return jsonify({
+            "code": 500,
+            "message": f"Error retrieving tickets: {str(e)}"
+        }), 500
 
+# Route 2
 @app.route('/tickets/resale', methods=['GET'])
 def get_resale_tickets():
     """Get all tickets currently listed for resale (status='available')."""
@@ -224,6 +239,7 @@ def get_resale_tickets():
         logger.error(f"Error retrieving resale tickets: {str(e)}")
         return jsonify({"code": 500, "message": f"Error retrieving resale tickets: {str(e)}"}), 500
 
+# Route 3
 @app.route('/tickets/<string:eventID>/<string:eventDateTime>')
 def get_available_tickets(eventID, eventDateTime):
     '''get tickets with available status'''
@@ -240,6 +256,7 @@ def get_available_tickets(eventID, eventDateTime):
                         "tickets": tickets_data
                     }}), 200
 
+# Route 4
 @app.route('/ticket/<string:ticketID>', methods=['GET'])
 def get_ticket_by_id(ticketID):
     '''Get ticket by ticketID'''
@@ -254,6 +271,7 @@ def get_ticket_by_id(ticketID):
         "data": ticket.to_json()
     }), 200
 
+# Route 5
 @app.route('/tickets/<string:ownerID>')
 def get_tickets_by_user(ownerID):
     '''get tickets under selected user'''
@@ -270,6 +288,7 @@ def get_tickets_by_user(ownerID):
                         "tickets":tickets_data
                     }}), 200
 
+# Route 6 [PUT]
 @app.route('/ticket/<string:ticketID>', methods=['PUT'])
 def update_ticket(ticketID):
     # Find the ticket by ticketID
@@ -293,13 +312,9 @@ def update_ticket(ticketID):
 
     # Update the ticket with new values from the request
     try:
-        logger.info(f"Attempting to update ticket {ticketID} with data: {data}")
         ticket.update(**data)
-        logger.info(f"Successfully updated ticket {ticketID}")
     except (db.errors.ValidationError, db.errors.OperationError, Exception) as e:
         logger.error(f"Error updating ticket {ticketID}: {str(e)}")
-        import traceback
-        logger.error(traceback.format_exc())
         return jsonify({
             "code": 500,
             "data": {"ticketID": ticketID},
@@ -329,7 +344,7 @@ def update_ticket(ticketID):
     }), 200
 
 
-# POST /ticket/<ticketID> - Create new ticket
+# Route 7 [POST]
 @app.route("/ticket/<string:ticketID>", methods=["POST"])
 def create_ticket(ticketID):
     try:
@@ -393,7 +408,6 @@ def create_ticket(ticketID):
         
         try:
             event_datetime = datetime.fromisoformat(data["eventDateTime"].replace("Z", "+00:00"))
-            logger.info(f"Parsed event datetime: {event_datetime}")
         except ValueError as e:
             logger.error(f"Error parsing datetime: {e}")
             return jsonify({
@@ -418,9 +432,7 @@ def create_ticket(ticketID):
                 paymentID=data["paymentID"],
                 isCheckedIn=data["isCheckedIn"]
             )
-            logger.info("Attempting to save ticket to database")
             ticket.save()
-            logger.info("Successfully saved ticket to database")
         except Exception as e:
             logger.error(f"Error saving ticket: {str(e)}")
             raise
@@ -439,7 +451,6 @@ def create_ticket(ticketID):
         }
 
         # Publish to RabbitMQ
-        logger.info("Attempting to publish to RabbitMQ")
         if publish_to_rabbitmq('ticket.purchased', message):
             logger.info("Successfully published to RabbitMQ")
         else:
@@ -461,21 +472,6 @@ def create_ticket(ticketID):
             "message": f"An error occurred creating the ticket: {str(e)}"
         }), 500
 
-@app.route('/ticket', methods=['GET'])
-def get_all_tickets():
-    try:
-        tickets = Ticket.objects()
-        return jsonify({
-            "code": 200,
-            "data": {
-                "tickets": [ticket.to_json() for ticket in tickets]
-            }
-        })
-    except Exception as e:
-        return jsonify({
-            "code": 500,
-            "message": f"Error retrieving tickets: {str(e)}"
-        }), 500
 
 # # === QR Code Generation Endpoint (Simplified for Debugging) ===
 # @app.route('/generateQR/<string:ticketID>', methods=['POST'])

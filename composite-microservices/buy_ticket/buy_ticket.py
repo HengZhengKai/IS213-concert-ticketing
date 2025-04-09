@@ -22,7 +22,7 @@ CORS(app)
 
 # Determine if we're running in Docker or locally
 is_docker = os.getenv("DOCKER_ENV", "false").lower() == "true"
-base_url = "http://kong:8000" if is_docker else "http://localhost:8000"  # Changed back to 8000
+base_url = "http://kong:8000" if is_docker else "http://localhost:8000" 
 rabbitmq_host = "rabbitmq" if is_docker else "localhost"
 
 credentials = pika.PlainCredentials('guest', 'guest')
@@ -34,13 +34,6 @@ transaction_URL = f"{base_url}/transaction"
 user_URL = f"{base_url}/user"
 payment_URL = f"{base_url}/payment"
 email_URL = f"{base_url}/email"
-
-# Add debug info
-print(f"Service URLs:")
-print(f"Event URL: {event_URL}")
-print(f"Ticket URL: {ticket_URL}")
-print(f"User URL: {user_URL}")
-print(f"Transaction URL: {transaction_URL}")
 
 def get_rabbitmq_connection():
     """Get a RabbitMQ connection with retry logic"""
@@ -330,7 +323,6 @@ def process_buy_ticket(userID, eventName, eventID, eventDateTime, seatNo, seatCa
             "message": "Ticket purchase successful."
         }
     except Exception as e:
-        print(f"Error in process_buy_ticket: {str(e)}")
         return {
             "code": 500,
             "message": f"Error processing ticket: {str(e)}"

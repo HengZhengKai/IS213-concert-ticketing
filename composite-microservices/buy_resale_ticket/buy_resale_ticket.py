@@ -9,7 +9,6 @@ from invokes import invoke_http
 import time
 import logging
 from requests.exceptions import ConnectionError, RequestException
-import stripe
 from pika.exceptions import AMQPConnectionError, AMQPChannelError
 
 app = Flask(__name__)
@@ -25,15 +24,11 @@ stripe.api_key = os.getenv('STRIPE_SECRET_KEY', 'your_stripe_secret_key')
 rabbitmq_host = os.getenv("RABBITMQ_HOST", "rabbitmq")
 credentials = pika.PlainCredentials('guest', 'guest')
 
-# Determine if we're running in Docker or locally
-is_docker = os.getenv("DOCKER_ENV", "false").lower() == "true"
-base_url = "http://kong:8000" if is_docker else "http://localhost:8000"
-
-waitlist_URL = f"{base_url}/waitlist"
-ticket_URL = f"{base_url}/ticket"
-transaction_URL = f"{base_url}/transaction"
-user_URL = f"{base_url}/user"
-payment_URL = f"{base_url}"
+waitlist_URL = "http://kong:8000/waitlist"
+ticket_URL = "http://kong:8000/ticket"
+transaction_URL = "http://kong:8000/transaction"
+user_URL = "http://kong:8000/user"
+payment_URL = "http://kong:8000"
 
 def get_rabbitmq_connection():
     """Get a RabbitMQ connection with retry logic"""
@@ -116,8 +111,6 @@ def buy_resale_ticket(ticketID):
             if not all(field in data for field in required_fields):
                 return jsonify({"code": 400, "message": "Missing required fields."}), 400
             
-            print(f"\nReceived a request to buy resale ticket with ID: {ticketID}")
-
             # Extract userID and paymentID from request data
             userID = data["userID"]
             paymentID = data["paymentID"]

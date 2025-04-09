@@ -170,7 +170,6 @@ def get_all_events():
 #Route 2
 @app.route("/event/<string:eventID>")
 def select_event(eventID):
-    print(f"[DEBUG] /event/{eventID} called")
     try:
         event = Event.objects(eventID=eventID).first()
 
@@ -179,8 +178,6 @@ def select_event(eventID):
         
         event_id = event.eventID
         event_dates = EventDate.objects(eventID=event_id)
-        print(event_id)
-        print(event_dates)
 
         return jsonify(
             {
@@ -203,9 +200,7 @@ def select_event(eventID):
 #Route 3
 @app.route("/event/<string:eventID>/<string:eventDateTime>")
 def select_event_date(eventID, eventDateTime):
-    try:
-        logger.info(f"Searching for event date with eventID: {eventID} and eventDateTime: {eventDateTime}")
-        
+    try:        
         # Find the Event document
         event = Event.objects(eventID=eventID).first()
         if not event:
@@ -226,7 +221,6 @@ def select_event_date(eventID, eventDateTime):
         # Parse the input datetime string
         try:
             search_datetime = datetime.fromisoformat(eventDateTime.replace('Z', '+00:00'))
-            logger.info(f"Parsed search datetime: {search_datetime.isoformat()}")
         except ValueError as e:
             logger.error(f"Error parsing datetime: {e}")
             return jsonify(
@@ -266,9 +260,7 @@ def select_event_date(eventID, eventDateTime):
 #Route 4
 @app.route("/event/<string:eventID>/<string:eventDateTime>", methods = ["PUT"])
 def update_event(eventID, eventDateTime):
-    try:
-        logger.info(f"Updating event {eventID} for datetime {eventDateTime}")
-        
+    try:        
         # Find the Event document
         event = Event.objects(eventID=eventID).first()
         if not event:
@@ -425,8 +417,7 @@ def detailed_diagnostic():
     
     except Exception as e:
         return jsonify({
-            "error": str(e),
-            "traceback": traceback.format_exc()
+            "error": str(e)
         }),
 
 if __name__ == '__main__':

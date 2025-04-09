@@ -65,54 +65,8 @@ class Seat(db.Document):
             "status": self.status
         }
 
-#Route 1
-@app.route('/seat', methods=['PUT'])
-def update_seat():
-    '''Update seat status'''
-    # Get the request data (seat status and other necessary details)
-    data = request.get_json()
-    required_fields = ["eventID", "eventDateTime", "seatNo", "status"]
-    
-    # Check if all necessary fields are present
-    if 'status' not in data:
-        return jsonify({"code": 400, "message": "Missing status."}), 400
-
-    if not all(field in data for field in required_fields):
-        return jsonify({"code": 400, "message": "Missing required fields."}), 400
-    
-    seat = Seat.objects(eventID=data['eventID'], eventDateTime=data['eventDateTime'], seatNo=data['seatNo']).first()
-
-    # Check if the seat is already reserved
-    # if data["status"] == seat.status:
-    #     return jsonify({
-    #         "code": 409,
-    #         "data": {"eventID": data['eventID'], "seatNo": data['seatNo']},
-    #         "message": f"Seat already {seat.status}."
-    #     }), 409
-    
-    category = seat.category
-    price = seat.price
-
-    # Update the seat status
-    seat.update(status=data["status"])
-
-    # Return a success response
-    return jsonify({
-        "code": 200,
-        "data": {
-            "eventID": data['eventID'],
-            "eventDateID": data['eventDateID'],
-            "eventDateTime": data['eventDateTime'],
-            "seatNo": data['seatNo'],
-            "category": data['category'],
-            "price": data['price'],
-            "status": data["status"]
-        }
-    }), 200
-
-#displays the seats in json 
-#can view the json format of data via http://localhost:5002/seats
-@app.route('/seats', methods=['GET'])
+# Route 1
+@app.route('/seats')
 def get_all_seats():
     try:
         seats = Seat.objects()
@@ -136,6 +90,7 @@ def get_all_seats():
             "message": f"Error retrieving seats: {str(e)}"
         }), 500
 
+# Route 2
 @app.route('/seats/<string:eventID>/<path:eventDateTime>')
 def get_seats_for_event(eventID, eventDateTime):
     try:
@@ -165,8 +120,39 @@ def get_seats_for_event(eventID, eventDateTime):
             "message": f"Error retrieving seats: {str(e)}"
         }), 500
 
+# Route 3
+@app.route('/seat', methods=['PUT'])
+def update_seat():
+    '''Update seat status'''
+    # Get the request data (seat status and other necessary details)
+    data = request.get_json()
+    required_fields = ["eventID", "eventDateTime", "seatNo", "status"]
+    
+    # Check if all necessary fields are present
+    if 'status' not in data:
+        return jsonify({"code": 400, "message": "Missing status."}), 400
 
+    if not all(field in data for field in required_fields):
+        return jsonify({"code": 400, "message": "Missing required fields."}), 400
+    
+    seat = Seat.objects(eventID=data['eventID'], eventDateTime=data['eventDateTime'], seatNo=data['seatNo']).first()
+    
+    # Update the seat status
+    seat.update(status=data["status"])
 
+    # Return a success response
+    return jsonify({
+        "code": 200,
+        "data": {
+            "eventID": data['eventID'],
+            "eventDateID": data['eventDateID'],
+            "eventDateTime": data['eventDateTime'],
+            "seatNo": data['seatNo'],
+            "category": data['category'],
+            "price": data['price'],
+            "status": data["status"]
+        }
+    }), 200
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5002, debug=True)

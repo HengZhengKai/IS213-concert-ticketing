@@ -110,7 +110,7 @@ class User(db.Document): # tell flask what are the fields in your database
             "phoneNum": self.phoneNum
         }
 
-# --- ADD THE LOGIN ROUTE (Plain Text Password Check) --- 
+# --- LOGIN ROUTE (Plain Text Password Check) --- 
 @app.route('/login', methods=['POST'])
 def login():
     try:
@@ -155,34 +155,11 @@ def login():
         return jsonify({"message": f"An error occurred during login: {str(e)}"}), 500
 # --- END OF LOGIN ROUTE ---
 
-@app.route("/user/<string:userID>")
-def get_user(userID):
-    user = User.objects(_id=userID).first() 
-    if user:
-        # Use the updated to_json which excludes password
-        return jsonify({"code": 200, "data": user.to_json()})
-    return jsonify({"code": 404, "message": "User not found."}), 404
-
-@app.route("/user/email/<string:email>")
-def get_user_by_email(email):
-    try:
-        logger.info(f"Looking up user by email: {email}")
-        user = User.objects(email=email).first()
-        if user:
-            logger.info(f"Found user: {user.to_json()}")
-            # Use the updated to_json which excludes password
-            return jsonify({"code": 200, "data": user.to_json()})
-        logger.info(f"No user found with email: {email}")
-        return jsonify({"code": 404, "message": "User not found."}), 404
-    except Exception as e:
-        logger.error(f"Error finding user by email: {e}")
-        return jsonify({"code": 500, "message": f"Error finding user: {str(e)}"}), 500
-
+# Route 1
 @app.route('/users', methods=['GET'])
 def get_all_users():
     try:
         users = User.objects()
-        logger.info(f"Retrieved {len(users)} users from database")
         return jsonify({
             "code": 200,
             # Use the updated to_json which excludes password
@@ -191,6 +168,26 @@ def get_all_users():
     except Exception as e:
         logger.error(f"Error retrieving users: {e}")
         return jsonify({"code": 500, "message": f"Error retrieving users: {str(e)}"}), 500
+
+# Route 2
+@app.route("/user/<string:userID>")
+def get_user(userID):
+    user = User.objects(_id=userID).first() 
+    if user:
+        # Use the updated to_json which excludes password
+        return jsonify({"code": 200, "data": user.to_json()})
+    return jsonify({"code": 404, "message": "User not found."}), 404
+
+# Route 3
+@app.route("/user/email/<string:email>")
+def get_user_by_email(email):
+    try:
+        user = User.objects(email=email).first()
+        if user:
+            return jsonify({"code": 200, "data": user.to_json()})
+        return jsonify({"code": 404, "message": "User not found."}), 404
+    except Exception as e:
+        return jsonify({"code": 500, "message": f"Error finding user: {str(e)}"}), 500
 
 if __name__ == '__main__':
     # Run on port 5006 as specified in docker-compose.yml

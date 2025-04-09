@@ -60,9 +60,10 @@ class Waitlist(db.Document): # tell flask what are the fields in your database
             "waitlistDate": self.waitlistDate.isoformat() if self.waitlistDate else None
         }
 
+# Route 1
 @app.route("/waitlist/<string:eventID>/<string:eventDateTime>")
 def get_waitlist(eventID, eventDateTime):
-    '''get all users in waitlist'''
+    '''get all users in waitlist of event'''
     event_waitlist = Waitlist.objects(eventID=eventID, eventDateTime=eventDateTime).only("userID", "waitlistDate")
     
     return jsonify({
@@ -74,13 +75,32 @@ def get_waitlist(eventID, eventDateTime):
         }
     }), 200
 
+# Route 2
+@app.route('/waitlist/user/<string:userID>', methods=['GET'])
+def get_waitlists_by_user(userID):
+    try:
+        waitlist_entries = Waitlist.objects(userID=userID)
+
+        if not waitlist_entries:
+            return jsonify({"code": 404, "message": "No waitlist entries found for this user."}), 404
+
+        return jsonify({
+            "code": 200,
+            "data": {
+                "waitlist": [entry.to_json() for entry in waitlist_entries]
+            }
+        }), 200
+
+    except Exception as e:
+        logger.error(f"Error retrieving waitlist for user {userID}: {e}")
+        return jsonify({
+            "code": 500,
+            "message": f"Internal server error: {str(e)}"
+        }), 500
+
+# Route 3
 @app.route('/waitlist/<string:eventID>/<string:eventDateTime>', methods=['POST'])
 def add_to_waitlist(eventID, eventDateTime):
-    try:
-        event_date = parser.isoparse(eventDateTime)
-    except ValueError:
-        return jsonify({"code": 400, "message": "Invalid eventDateTime format."}), 400
-
     data = request.get_json()
     if not data or "userID" not in data:
         return jsonify({"code": 400, "message": "Missing userID in request body."}), 400
@@ -104,29 +124,6 @@ def add_to_waitlist(eventID, eventDateTime):
             "waitlistDate": waitlist.waitlistDate.strftime('%Y-%m-%d %H:%M:%S')
         }
     }), 201
-
-@app.route('/waitlist/user/<string:userID>', methods=['GET'])
-def get_waitlist_by_user(userID):
-    try:
-        waitlist_entries = Waitlist.objects(userID=userID)
-
-        if not waitlist_entries:
-            return jsonify({"code": 404, "message": "No waitlist entries found for this user."}), 404
-
-        return jsonify({
-            "code": 200,
-            "data": {
-                "waitlist": [entry.to_json() for entry in waitlist_entries]
-            }
-        }), 200
-
-    except Exception as e:
-        logger.error(f"Error retrieving waitlist for user {userID}: {e}")
-        return jsonify({
-            "code": 500,
-            "message": f"Internal server error: {str(e)}"
-        }), 500
-
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5003, debug=True)
