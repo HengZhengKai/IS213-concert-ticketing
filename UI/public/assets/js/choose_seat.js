@@ -127,6 +127,16 @@ const app = Vue.createApp({
     },
     openSignupModal() {
       if (this.canCheckout) {
+        const sessionUser = sessionStorage.getItem("user");
+        const user = sessionUser ? JSON.parse(sessionUser) : null;
+    
+        // Fill the first attendee with session user if not already filled
+        if (user && this.attendeeForms.length > 0) {
+          this.attendeeForms[0].name = user.name || '';
+          this.attendeeForms[0].email = user.email || '';
+          this.attendeeForms[0].phone = user.phoneNum ? `+65${user.phoneNum}` : '';
+        }
+    
         this.$nextTick(() => {
           const modalEl = document.getElementById("signupModal");
           if (modalEl) {
