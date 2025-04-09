@@ -73,6 +73,10 @@ services:
       - "5004:5004"
     env_file:
       - ./atomic-microservices/ticket/.env
+    environment:
+    - RABBITMQ_HOST=rabbitmq
+    depends_on:
+      - rabbitmq
 
   ##################################
   #? transaction_service: The Transaction microservice
@@ -97,6 +101,10 @@ services:
       - "5006:5006"
     env_file:
       - ./atomic-microservices/user/.env
+    environment:
+    - RABBITMQ_HOST=rabbitmq
+    depends_on:
+      - rabbitmq
 
   ##################################
   #? payment_service: The Payment microservice
@@ -124,6 +132,9 @@ services:
     depends_on:
       rabbitmq:
           condition: service_healthy
+
+    environment:
+    - RABBITMQ_HOST=rabbitmq
 
 
   celery-email-service:
@@ -221,7 +232,7 @@ services:
   ##################################
 
   rabbitmq:
-    image: rabbitmq
+    image: rabbitmq:management
     hostname: rabbitmq
     container_name: rabbitmq
     restart: always

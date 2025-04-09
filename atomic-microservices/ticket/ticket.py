@@ -66,8 +66,9 @@ except Exception as e:
     logger.error(f"Failed to connect to MongoDB: {e}")
 
 # Get RabbitMQ host and URI
-RABBITMQ_HOST = os.getenv('RABBITMQ_HOST', 'localhost')
-RABBITMQ_URI = os.getenv('RABBITMQ_PORT', 'tcp://localhost:5672')
+# Get RabbitMQ host and URI
+RABBITMQ_HOST = os.getenv('RABBITMQ_HOST', 'rabbitmq')
+RABBITMQ_URI = os.getenv('RABBITMQ_PORT', 'tcp://rabbitmq:5672')
 
 # Extract the port number from the URI
 match = re.search(r'tcp://.*:(\d+)', RABBITMQ_URI)
@@ -415,6 +416,22 @@ def create_ticket(ticketID):
             isCheckedIn=data["isCheckedIn"]
         )
         ticket.save()
+
+        # Prepare message for email service
+        message = {
+            "ownerID": data["ownerID"],
+            "user_name": data["ownerName"],
+            "_id": ticketID,
+            "event_id": data["eventID"],
+            "event_name": data["eventName"],
+            "eventDateTime": data["eventDateTime"],
+            "seatNo": data["seatNo"],
+            "seatCategory": data["seatCategory"],
+            "price": data["price"]
+        }
+
+        # Publish to RabbitMQ
+        publish_to_rabbitmq('ticket.purchased', message)
 
         # Return successful response
         return jsonify({
