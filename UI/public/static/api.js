@@ -6,7 +6,7 @@ async function fetchEvents(retries = 3, delayMs = 500) {
 
     try {
         // NOTE: Changed URL to target event_service directly based on docker-compose
-        const response = await fetch("http://localhost:5001/event"); 
+        const response = await fetch("http://localhost:8000/event"); 
         
         if (!response.ok) {
             // Throw an error for bad HTTP status codes

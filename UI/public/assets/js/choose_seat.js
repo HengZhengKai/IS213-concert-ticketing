@@ -35,7 +35,7 @@ const app = Vue.createApp({
       const { eventID, eventDateTime } = this.getQueryParams();
       const encodedDateTime = encodeURIComponent(eventDateTime);
       try {
-        const res = await fetch(`http://localhost:5002/seats/${eventID}/${encodedDateTime}`);
+        const res = await fetch(`http://localhost:8000/seats/${eventID}/${encodedDateTime}`);
         const data = await res.json();
         if (data.code === 200) {
           this.seats = data.data;
@@ -182,7 +182,7 @@ const app = Vue.createApp({
         const encodedDateTime = encodeURIComponent(eventDateTime);
         const cancelUrl = `http://localhost:8080/choose_seat.html?eventID=${eventID}&eventDateTime=${encodedDateTime}`;
 
-        const response = await fetch("http://localhost:5007/start-checkout", {
+        const response = await fetch("http://localhost:8000/start-checkout", {
           method: "POST",
           headers: {
             "Content-Type": "application/json"
@@ -219,7 +219,7 @@ const app = Vue.createApp({
     async fetchEventDetails() {
       const { eventID } = this.getQueryParams();
       try {
-        const res = await fetch(`http://localhost:5001/event/${eventID}`);
+        const res = await fetch(`http://localhost:8000/event/${eventID}`);
         const data = await res.json();
         if (data.code === 200) {
           this.eventName = data.data.eventName;  // ✅ store the name
