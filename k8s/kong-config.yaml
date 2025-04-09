@@ -1,0 +1,155 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: kong-config
+data:
+  kong.yml: |
+    _format_version: "3.0"
+    _transform: true
+
+    services:
+      - name: root-service
+        url: http://httpbin.org/anything
+        routes:
+          - name: root-route
+            paths:
+              - /$
+            protocols: 
+              - http
+              - https
+            methods:
+              - GET
+            strip_path: false
+            preserve_host: false
+            regex_priority: 0
+
+      - name: event-service
+        url: http://event-service:5001
+        routes:
+          - name: event-route
+            paths:
+              - /event
+            strip_path: false
+            regex_priority: 100
+
+      - name: user-service
+        url: http://user-service:5002
+        routes:
+          - name: user-route
+            paths:
+              - /user
+            strip_path: false
+            regex_priority: 100
+
+      - name: ticket-service
+        url: http://ticket-service:5003
+        routes:
+          - name: ticket-route
+            paths:
+              - /ticket
+            strip_path: false
+            regex_priority: 100
+
+      - name: seat-service
+        url: http://seat-service:5004
+        routes:
+          - name: seat-route
+            paths:
+              - /seat
+            strip_path: false
+            regex_priority: 100
+
+      - name: payment-service
+        url: http://payment-service:5005
+        routes:
+          - name: payment-route
+            paths:
+              - /payment
+            strip_path: false
+            regex_priority: 100
+
+      - name: email-service
+        url: http://email-service:5006
+        routes:
+          - name: email-route
+            paths:
+              - /email
+            strip_path: false
+            regex_priority: 100
+
+      - name: waitlist-service
+        url: http://waitlist-service:5007
+        routes:
+          - name: waitlist-route
+            paths:
+              - /waitlist
+            strip_path: false
+            regex_priority: 100
+
+      - name: buy-ticket-service
+        url: http://buy-ticket-service:5008
+        routes:
+          - name: buy-ticket-route
+            paths:
+              - /buyticket
+            strip_path: false
+            regex_priority: 100
+
+      - name: sell-ticket-service
+        url: http://sell-ticket-service:5009
+        routes:
+          - name: sell-ticket-route
+            paths:
+              - /sellticket
+            strip_path: false
+            regex_priority: 100
+
+      - name: buy-resale-ticket-service
+        url: http://buy-resale-ticket-service:5010
+        routes:
+          - name: buy-resale-ticket-route
+            paths:
+              - /buyresaleticket
+            strip_path: false
+            regex_priority: 100
+
+      - name: transaction-service
+        url: http://transaction-service:5011
+        routes:
+          - name: transaction-route
+            paths:
+              - /transaction
+            strip_path: false
+            regex_priority: 100
+
+    plugins:
+      - name: cors
+        config:
+          origins:
+            - "*"
+          methods:
+            - HEAD
+            - GET
+            - POST
+            - PUT
+            - PATCH
+            - DELETE
+            - OPTIONS
+          headers:
+            - Access-Control-Allow-Origin
+            - Accept
+            - Accept-Version
+            - Content-Length
+            - Content-MD5
+            - Content-Type
+            - Authorization
+          exposed_headers:
+            - X-Auth-Token
+          credentials: true
+          max_age: 3600
+          preflight_continue: false
+
+      - name: rate-limiting
+        config:
+          second: 25
+          policy: local 

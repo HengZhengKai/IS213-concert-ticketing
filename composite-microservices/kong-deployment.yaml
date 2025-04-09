@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: kong
+  namespace: default
 spec:
   replicas: 1
   selector:
@@ -14,7 +15,19 @@ spec:
     spec:
       containers:
       - name: kong
-        image: kong:3.5
+        image: kong:latest
+        ports:
+        - containerPort: 8000
+        - containerPort: 8443
+        - containerPort: 8001
+        readinessProbe:
+          httpGet:
+            path: /status
+            port: 8001
+          initialDelaySeconds: 10
+          timeoutSeconds: 2
+          periodSeconds: 10
+          failureThreshold: 3
         env:
         - name: KONG_DATABASE
           value: "off"
@@ -30,36 +43,11 @@ spec:
           value: /dev/stderr
         - name: KONG_ADMIN_LISTEN
           value: "0.0.0.0:8001"
-        ports:
-        - name: proxy
-          containerPort: 8000
-        - name: proxy-ssl
-          containerPort: 8443
-        - name: admin-api
-          containerPort: 8001
         volumeMounts:
-        - name: kong-config
-          mountPath: /usr/local/kong/declarative
+        - name: kong-config-volume
+          mountPath: /usr/local/kong/declarative/kong.yml
+          subPath: kong.yml
       volumes:
-      - name: kong-config
+      - name: kong-config-volume
         configMap:
-          name: kong-config
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: kong-proxy
-spec:
-  type: LoadBalancer
-  ports:
-  - name: proxy
-    port: 80
-    targetPort: 8000
-  - name: proxy-ssl
-    port: 443
-    targetPort: 8443
-  - name: admin-api
-    port: 8001
-    targetPort: 8001
-  selector:
-    app: kong 
+          name: kong-config 
