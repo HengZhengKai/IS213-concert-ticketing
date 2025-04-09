@@ -51,7 +51,6 @@ def send_message(user_id, ticket):
             "event_date": str(ticket["event_date"]),
         }
         
-        
         # Send message via RabbitMQ
         connection = pika.BlockingConnection(pika.ConnectionParameters(
             host=RABBITMQ_HOST,

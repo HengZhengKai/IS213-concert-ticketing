@@ -44,11 +44,9 @@ class Seat(db.Document):
     category = db.StringField()
     price = db.FloatField()
     status = db.StringField()
-    
-    # Make eventDateTime optional or remove it
-    
+        
     meta = {
-        'collection': 'Seat',  # Specify exact collection name
+        'collection': 'Seat',
         'indexes': [
             {'fields': ['eventDateID', 'eventDateTime', 'seatNo'], 'unique': True}
         ]

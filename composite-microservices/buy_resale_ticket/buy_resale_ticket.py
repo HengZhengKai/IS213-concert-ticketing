@@ -18,9 +18,6 @@ app.debug = True
 
 CORS(app)
 
-# Initialize Stripe with your secret key
-stripe.api_key = os.getenv('STRIPE_SECRET_KEY', 'your_stripe_secret_key')
-
 rabbitmq_host = os.getenv("RABBITMQ_HOST", "rabbitmq")
 credentials = pika.PlainCredentials('guest', 'guest')
 

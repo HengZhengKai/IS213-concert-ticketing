@@ -12,15 +12,12 @@ import urllib.parse
 import logging
 from dotenv import load_dotenv
 import requests
-#For Rabbitmq message publishing
 import pika
 import json
-
-# Imports for QR Code generation
 import qrcode
 import base64
 from io import BytesIO
-import jwt # For decoding token
+import jwt
 
 # Load environment variables from .env file
 load_dotenv()
@@ -34,16 +31,17 @@ app = Flask(__name__)
 # --- JWT Secret Key --- 
 app.config['SECRET_KEY'] = os.getenv("JWT_SECRET_KEY", "your_default_super_secret_key")
 
-# --- Configure CORS --- 
-# Allow requests from WAMP, Python HTTP server, and potentially other local ports
-cors_origins = ["http://localhost", "http://localhost:8000", "http://localhost:8080"]
-CORS(app, 
-        resources={r"/*": {"origins": cors_origins}}, 
-        methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"], # Allow common methods
-        allow_headers=["Authorization", "Content-Type", "Accept"], # Allow necessary headers
-        supports_credentials=True # If you need cookies/session later
-)
-# --- End CORS Configuration ---
+# # Allow requests from Python HTTP server
+# cors_origins = ["http://localhost", "http://localhost:8000", "http://localhost:8080"]
+# CORS(app, 
+#         resources={r"/*": {"origins": cors_origins}}, 
+#         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"], # Allow common methods
+#         allow_headers=["Authorization", "Content-Type", "Accept"], # Allow necessary headers
+#         supports_credentials=True # If you need cookies/session later
+# )
+# # --- End CORS Configuration ---
+
+CORS(app)
 
 # --- Event Service URL --- 
 EVENT_SERVICE_URL = os.getenv("EVENT_SERVICE_URL", "http://event_service:5001")
@@ -67,17 +65,9 @@ except Exception as e:
     raise  # Re-raise the exception to prevent the service from starting with a bad connection
 
 # Get RabbitMQ host and URI
-# Get RabbitMQ host and URI
 RABBITMQ_HOST = os.getenv('RABBITMQ_HOST', 'rabbitmq')
 RABBITMQ_URI = os.getenv('RABBITMQ_PORT', 'tcp://rabbitmq:5672')
-
-# Extract the port number from the URI
-match = re.search(r'tcp://.*:(\d+)', RABBITMQ_URI)
-if match:
-    RABBITMQ_PORT = int(match.group(1))  # Extracted port
-else:
-    RABBITMQ_PORT = 5672  # Default fallback port
-    
+RABBITMQ_PORT = 5672 
 RABBITMQ_USER = os.getenv('RABBITMQ_USER', 'guest')
 RABBITMQ_PASS = os.getenv('RABBITMQ_PASS', 'guest')
 
