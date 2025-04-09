@@ -267,9 +267,12 @@ def select_event_date(eventID, eventDateTime):
 @app.route("/event/<string:eventID>/<string:eventDateTime>", methods = ["PUT"])
 def update_event(eventID, eventDateTime):
     try:
+        logger.info(f"Updating event {eventID} for datetime {eventDateTime}")
+        
         # Find the Event document
         event = Event.objects(eventID=eventID).first()
         if not event:
+            logger.warning(f"Event with eventID {eventID} not found")
             return jsonify(
                 {
                     "code": 404,
@@ -277,10 +280,24 @@ def update_event(eventID, eventDateTime):
                 }
             ), 404
 
+        # Parse the input datetime string
+        try:
+            search_datetime = datetime.fromisoformat(eventDateTime.replace('Z', '+00:00'))
+            logger.info(f"Parsed search datetime: {search_datetime.isoformat()}")
+        except ValueError as e:
+            logger.error(f"Error parsing datetime: {e}")
+            return jsonify(
+                {
+                    "code": 400,
+                    "message": f"Invalid datetime format: {eventDateTime}"
+                }
+            ), 400
+
         # Find the specific EventDate
-        event_date = EventDate.objects(eventID=eventID, eventDateTime=eventDateTime).first()
+        event_date = EventDate.objects(eventID=eventID, eventDateTime=search_datetime).first()
 
         if not event_date:
+            logger.warning(f"No event date found for eventID {eventID} on {search_datetime.isoformat()}")
             return jsonify(
                 {
                     "code": 404,
@@ -290,9 +307,11 @@ def update_event(eventID, eventDateTime):
 
         # Get JSON data from request body
         data = request.get_json()
+        logger.info(f"Received update data: {data}")
 
         # Validate input
         if "availableSeats" not in data:
+            logger.warning("Missing 'availableSeats' field in request")
             return jsonify(
                 {
                     "code": 400,
@@ -300,20 +319,51 @@ def update_event(eventID, eventDateTime):
                 }
             ), 400
 
-        if not isinstance(data["availableSeats"], int) or data["availableSeats"] < 0:
+        if not isinstance(data["availableSeats"], int):
+            logger.warning(f"Invalid availableSeats type: {type(data['availableSeats'])}")
             return jsonify(
                 {
                     "code": 400,
-                    "data": {"availableSeats": data["availableSeats"]},
-                    "message": "Number of available seats cannot be negative."
+                    "message": "availableSeats must be an integer."
+                }
+            ), 400
+
+        # Calculate new available seats
+        new_available_seats = event_date.availableSeats + data["availableSeats"]
+        
+        if new_available_seats < 0:
+            logger.warning(f"Not enough seats available. Current: {event_date.availableSeats}, Requested change: {data['availableSeats']}")
+            return jsonify(
+                {
+                    "code": 400,
+                    "message": f"Not enough seats available. Current seats: {event_date.availableSeats}"
+                }
+            ), 400
+
+        if new_available_seats > event.totalSeats:
+            logger.warning(f"New seat count exceeds total seats. Total: {event.totalSeats}, New: {new_available_seats}")
+            return jsonify(
+                {
+                    "code": 400,
+                    "message": f"New seat count exceeds total seats. Total seats: {event.totalSeats}"
                 }
             ), 400
 
         # Update available seats
-        event_date.availableSeats = data["availableSeats"]
+        event_date.availableSeats = new_available_seats
         event_date.event = event
 
-        event_date.save()
+        try:
+            event_date.save()
+            logger.info(f"Successfully updated event date with new available seats: {data['availableSeats']}")
+        except Exception as e:
+            logger.error(f"Failed to save event date update: {e}")
+            return jsonify(
+                {
+                    "code": 500,
+                    "message": f"Failed to save event date update: {str(e)}"
+                }
+            ), 500
 
         # Return updated event date
         return jsonify(
@@ -323,7 +373,7 @@ def update_event(eventID, eventDateTime):
             }
         )
     except Exception as e:
-        logger.error(f"Error in update_event_seats: {e}")
+        logger.error(f"Error in update_event: {e}")
         return jsonify(
             {
                 "code": 500,
