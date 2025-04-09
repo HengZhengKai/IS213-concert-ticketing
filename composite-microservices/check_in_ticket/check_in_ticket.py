@@ -15,7 +15,7 @@ local_ip = socket.gethostbyname(hostname)
 app = Flask(__name__)
 CORS(app)  # Simple CORS configuration allowing all origins
 
-ticket_URL = "http://localhost:5004/ticket"
+ticket_URL = "http://kong:8000/ticket"
 
 # Function to check if the ticket is checked in using GraphQL
 def is_ticket_checked_in(ticketID):
