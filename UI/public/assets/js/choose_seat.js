@@ -168,6 +168,10 @@ const app = Vue.createApp({
       this.showError = false;
     
       try {
+        const { eventID, eventDateTime } = this.getQueryParams();
+        const encodedDateTime = encodeURIComponent(eventDateTime);
+        const cancelUrl = `http://localhost:8080/choose_seat.html?eventID=${eventID}&eventDateTime=${encodedDateTime}`;
+
         const response = await fetch("http://localhost:5007/start-checkout", {
           method: "POST",
           headers: {
@@ -176,7 +180,7 @@ const app = Vue.createApp({
           body: JSON.stringify({
             mode: "payment",
             success_url: "http://localhost:8080/my_tickets.html?session_id={CHECKOUT_SESSION_ID}",
-            cancel_url: "https://httpbin.org/status/400",
+            cancel_url: cancelUrl,
             currency: "sgd", 
             product_name: productName,
             unit_amount: this.selectedSeats.length > 0 ? this.selectedSeats[0].price * 100 : 0, 

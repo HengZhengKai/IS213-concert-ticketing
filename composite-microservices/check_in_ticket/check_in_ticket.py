@@ -41,7 +41,7 @@ def is_ticket_checked_in(ticketID):
             return data["data"]["isCheckedIn"]
     return False  # Return False if ticket is not found or response is invalid
 
-@app.route('/generateQR/<string:ticketID>', methods=['POST', 'OPTIONS'])
+@app.route('/generateqr/<string:ticketID>', methods=['POST', 'OPTIONS'])
 def generate_qr_code(ticketID):
     # Use current local IP to construct full scan URL
     scan_url = f"http://{local_ip}:5103/scanqr/{ticketID}"
