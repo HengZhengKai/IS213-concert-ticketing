@@ -103,19 +103,33 @@ def get_user_email(user_id):
     """
     try:
         url = f"{USER_SERVICE_URL}/user/{user_id}"
-        logger.debug(f"Fetching user email for ID: {user_id}")
+        logger.info(f"Fetching user email for ID: {user_id} from URL: {url}")
         
         response = requests.get(url, timeout=5)
+        logger.info(f"User service response status: {response.status_code}")
+        logger.info(f"User service response body: {response.text}")
         
         if response.status_code == 200:
             user_data = response.json()
-            email = user_data.get('data', {}).get('email')
+            logger.info(f"Parsed user data: {user_data}")
+            
+            # Check if we have the expected data structure
+            if not isinstance(user_data, dict):
+                logger.error(f"Invalid response format from user service: {user_data}")
+                return None
+                
+            if 'data' not in user_data:
+                logger.error(f"Missing 'data' field in user service response: {user_data}")
+                return None
+                
+            # Get email from the user data
+            email = user_data['data'].get('email')
             
             if email:
-                logger.debug(f"Successfully retrieved email for user {user_id}")
+                logger.info(f"Successfully retrieved email for user {user_id}: {email}")
                 return email
             
-            logger.warning(f"No email found for user {user_id}")
+            logger.warning(f"No email found in user data for user {user_id}")
             return None
         
         logger.warning(f"Failed to get email for user {user_id}. Status code: {response.status_code}")
@@ -123,8 +137,11 @@ def get_user_email(user_id):
     except requests.RequestException as e:
         logger.error(f"Network error fetching user email for {user_id}: {e}")
         return None
-    except json.JSONDecodeError:
-        logger.error(f"Invalid JSON response when fetching email for user {user_id}")
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON response when fetching email for user {user_id}: {e}")
+        return None
+    except Exception as e:
+        logger.error(f"Unexpected error in get_user_email for user {user_id}: {e}")
         return None
 
 def connect_to_rabbitmq():
@@ -316,8 +333,68 @@ def handle_ticket_purchase(ch, method, properties, body):
         logger.error(f"Error processing ticket purchase: {e}", exc_info=True)
         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
-# Other message handling functions (handle_ticket_resale, handle_payment_confirmation, etc.) 
-# should be updated similarly with improved logging and error handling
+def handle_waitlist_notification(ch, method, properties, body):
+    """Handle waitlist notification email"""
+    try:
+        print(f"[Email Service] Received waitlist notification message: {body}")
+        
+        # Generate a unique message ID from the body
+        message_id = hash(body)
+        
+        # Check if we've already processed this message
+        if message_id in processed_messages:
+            print("[Email Service] Duplicate message detected, acknowledging and skipping")
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+            return
+            
+        data = json.loads(body)
+        print(f"[Email Service] Processing waitlist notification for user {data.get('user_id', 'Unknown')}")
+        
+        # Get required data
+        user_id = data.get('user_id')
+        event_id = data.get('event_id')
+        event_name = data.get('event_name')
+        event_date = data.get('event_date')
+        
+        print(f"[Email Service] Fetching email for user {user_id}")
+        # Get user email
+        user_email = get_user_email(user_id)
+        if not user_email:
+            print(f"[Email Service] No email address found for user {user_id}")
+            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+            return
+        
+        print(f"[Email Service] Sending email to {user_email}")
+        # Create email content
+        subject = f"Ticket Available: {event_name}"
+        
+        html_content = f"""
+        <html>
+        <body>
+            <h2>Ticket Available!</h2>
+            <p>Good news! A ticket has become available for an event you're interested in.</p>
+            <p>Event: <strong>{event_name}</strong> (ID: {event_id})</p>
+            <p>Date: {event_date}</p>
+            <p>Please visit our website to purchase the ticket before it's gone!</p>
+        </body>
+        </html>
+        """
+        
+        # Send email
+        success = send_email(user_email, subject, html_content)
+        
+        # Acknowledge or negative acknowledge based on email send result
+        if success:
+            processed_messages.add(message_id)  # Mark message as processed
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+            print(f"[Email Service] Email sent successfully to {user_email}")
+        else:
+            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+            print(f"[Email Service] Failed to send email to {user_email}")
+        
+    except Exception as e:
+        print(f"[Email Service] Error processing waitlist notification: {str(e)}")
+        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
 def start_consuming():
     """Set up consumers for all email queues and start consuming messages"""
@@ -326,9 +403,18 @@ def start_consuming():
     try:
         # Set up consumers for each queue
         rabbitmq_channel.basic_qos(prefetch_count=1)  # Process one message at a time
+        
+        # Set up consumer for ticket purchase queue
         rabbitmq_channel.basic_consume(
             queue='email.ticket.purchase',
             on_message_callback=handle_ticket_purchase,
+            auto_ack=False
+        )
+        
+        # Set up consumer for waitlist notification queue
+        rabbitmq_channel.basic_consume(
+            queue='email.waitlist.notification',
+            on_message_callback=handle_waitlist_notification,
             auto_ack=False
         )
         

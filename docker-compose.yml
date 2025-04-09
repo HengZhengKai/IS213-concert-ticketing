@@ -135,6 +135,7 @@ services:
 
     environment:
     - RABBITMQ_HOST=rabbitmq
+    - USER_SERVICE_URL=http://user-service:5006
 
 
   celery-email-service:
@@ -142,9 +143,12 @@ services:
     container_name: celery-email-service
     ports:
       - "5009:5009"
+    env_file:
+      - ./atomic-microservices/celery_email/.env
     depends_on:
       rabbitmq:
           condition: service_healthy
+    command: ./start.sh
 
   ##################################
   #? buy_ticket: The Buy Ticket microservice
