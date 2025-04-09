@@ -89,6 +89,7 @@ rabbitmq_connection = None
 rabbitmq_channel = None
 consumer_thread = None
 is_consuming = False
+processed_messages = set()  # Track processed message IDs
 
 def get_user_email(user_id):
     """
@@ -248,19 +249,27 @@ def send_email(recipient, subject, html_content):
 def handle_ticket_purchase(ch, method, properties, body):
     """Handle ticket purchase email"""
     try:
+        # Generate a unique message ID from the body
+        message_id = hash(body)
+        
+        # Check if we've already processed this message
+        if message_id in processed_messages:
+            logger.info("Duplicate message detected, acknowledging and skipping")
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+            return
+            
         data = json.loads(body)
-        logger.info(f"Processing ticket purchase for user {data.get('ownerID', 'Unknown')}")
+        logger.info(f"Processing ticket purchase for user {data.get('user_id', 'Unknown')}")
         
         # Get required data
-        user_id = data.get('ownerID')
+        user_id = data.get('user_id')
         user_name = data.get('user_name', 'Customer')
-        ticket_id = data.get('_id')
+        ticket_id = data.get('ticket_id')
         event_id = data.get('event_id')
         event_name = data.get('event_name')
-        event_date = data.get('eventDateTime')
-        seat_no = data.get('seatNo')
-        seat_category = data.get('seatCategory')
-        seat_info = data.get('seat_info') or f"{seat_category}, Seat {seat_no}"
+        event_date = data.get('event_date')
+        seat_no = data.get('seat_no')
+        seat_category = data.get('seat_category')
         price = data.get('price', 0)
         
         # Get user email
@@ -297,6 +306,7 @@ def handle_ticket_purchase(ch, method, properties, body):
         
         # Acknowledge or negative acknowledge based on email send result
         if success:
+            processed_messages.add(message_id)  # Mark message as processed
             ch.basic_ack(delivery_tag=method.delivery_tag)
             logger.info(f"Ticket purchase email processed successfully for user {user_id}")
         else:
@@ -315,13 +325,12 @@ def start_consuming():
     
     try:
         # Set up consumers for each queue
+        rabbitmq_channel.basic_qos(prefetch_count=1)  # Process one message at a time
         rabbitmq_channel.basic_consume(
             queue='email.ticket.purchase',
             on_message_callback=handle_ticket_purchase,
             auto_ack=False
         )
-        
-        # Add similar consumers for other queues
         
         logger.info("Email service started consuming messages")
         is_consuming = True
