@@ -50,7 +50,7 @@ class Seat(db.Document):
     meta = {
         'collection': 'Seat',  # Specify exact collection name
         'indexes': [
-            {'fields': ['eventID', 'eventDateTime', 'seatNo'], 'unique': True}
+            {'fields': ['eventDateID', 'eventDateTime', 'seatNo'], 'unique': True}
         ]
     }
 
