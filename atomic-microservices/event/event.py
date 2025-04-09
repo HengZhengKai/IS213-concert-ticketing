@@ -328,29 +328,8 @@ def update_event(eventID, eventDateTime):
                 }
             ), 400
 
-        # Calculate new available seats
-        new_available_seats = event_date.availableSeats + data["availableSeats"]
-        
-        if new_available_seats < 0:
-            logger.warning(f"Not enough seats available. Current: {event_date.availableSeats}, Requested change: {data['availableSeats']}")
-            return jsonify(
-                {
-                    "code": 400,
-                    "message": f"Not enough seats available. Current seats: {event_date.availableSeats}"
-                }
-            ), 400
-
-        if new_available_seats > event.totalSeats:
-            logger.warning(f"New seat count exceeds total seats. Total: {event.totalSeats}, New: {new_available_seats}")
-            return jsonify(
-                {
-                    "code": 400,
-                    "message": f"New seat count exceeds total seats. Total seats: {event.totalSeats}"
-                }
-            ), 400
-
         # Update available seats
-        event_date.availableSeats = new_available_seats
+        event_date.availableSeats = data["availableSeats"]
         event_date.event = event
 
         try:
