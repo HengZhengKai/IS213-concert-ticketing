@@ -11,7 +11,12 @@ const app = Vue.createApp({
             user: null,             // Store logged in user info
             token: null,            // Store auth token
             resalePrices: {},       // Object to store resale price input, keyed by ticketID
-            resaleMessages: {}      // Object to store feedback per ticket, keyed by ticketID
+            resaleMessages: {},     // Object to store feedback per ticket, keyed by ticketID
+            
+            // Data for buying tickets - RE-ADDING THESE
+            resaleTicketsAvailable: [], // Array for tickets available for purchase
+            loadingResale: true,        // Loading state for buyer section
+            resaleError: null           // Error message for buyer section
             
             // Removed old single form data
             // sellTicketData: {
@@ -39,6 +44,7 @@ const app = Vue.createApp({
             return;
         }
         await this.loadUserTickets();
+        await this.loadResaleTickets();
     },
     methods: {
         // Method to fetch user's tickets (similar to check_in_vue.js)
@@ -138,6 +144,100 @@ const app = Vue.createApp({
                     hour: 'numeric', minute: 'numeric', hour12: true 
                 });
             } catch (e) { return 'Invalid Date'; }
+        },
+
+        // --- Buyer Methods --- 
+        async loadResaleTickets() {
+            console.log("[Resale App] Fetching available resale tickets...");
+            this.loadingResale = true;
+            this.resaleError = null;
+            try {
+                // Fetch tickets with status 'available'
+                const response = await fetch(`${ticketServiceBaseUrl}/tickets/resale`, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' } // No auth needed to view
+                });
+                if (!response.ok) { 
+                    throw new Error(`HTTP error ${response.status}`); 
+                }
+                const data = await response.json();
+                console.log("[Resale App] Resale Tickets API response:", data);
+                
+                if (data.code === 200 && data.data && Array.isArray(data.data.tickets)) {
+                     // Map to consistent fields (similar to loadUserTickets)
+                    this.resaleTicketsAvailable = data.data.tickets.map(ticket => ({ 
+                        ticketID: ticket.ticketID || ticket.ticket_id || null,
+                        eventName: ticket.eventName || ticket.event_name || 'Unknown Event',
+                        eventDateTime: ticket.eventDateTime || ticket.event_date_time || ticket.date || null,
+                        seatNo: ticket.seatNo || ticket.seatNumber || ticket.seat_number || 'N/A',
+                        seatCategory: ticket.seatCategory || 'N/A',
+                        price: ticket.price, // Original price
+                        resalePrice: ticket.resalePrice, // Resale price!
+                        status: ticket.status, 
+                        ownerID: ticket.ownerID // Needed later for purchase logic maybe
+                        // Don't need isCheckedIn here
+                    }));
+                } else {
+                     console.error("[Resale App] Could not parse resale tickets array:", data);
+                     this.resaleTicketsAvailable = []; // Ensure it's an empty array on error
+                     // Optional: Set resaleError based on data.message if available
+                }
+
+            } catch (error) {
+                console.error('[Resale App] Error loading resale tickets:', error);
+                this.resaleError = `Failed to load resale tickets: ${error.message}.`;
+                this.resaleTicketsAvailable = []; // Ensure empty on fetch error
+            } finally {
+                this.loadingResale = false;
+            }
+        },
+        
+        async buyResaleTicket(ticket) {
+            console.log(`[Resale App] Initiating purchase for ticket:`, ticket);
+            // Add a simple loading/feedback state for the specific button if desired
+            
+            // --- Step 1: Attempt to reserve the ticket --- 
+            try {
+                console.log(`[Resale App] Attempting to reserve ticket ${ticket.ticketID} by setting status to 'reserved'.`);
+                const reserveResponse = await fetch(`${ticketServiceBaseUrl}/ticket/${ticket.ticketID}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${this.token}`, // Assuming reservation requires auth
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ status: 'reserved' })
+                });
+
+                const reserveData = await reserveResponse.json();
+
+                if (!reserveResponse.ok) {
+                    // Handle failed reservation (e.g., 409 Conflict)
+                    console.error(`[Resale App] Failed to reserve ticket ${ticket.ticketID}:`, reserveData);
+                    alert(`Failed to reserve ticket: ${reserveData.message || 'Another user may have already purchased it.'}`);
+                    // Optional: Refresh the list of available resale tickets
+                    this.loadResaleTickets(); 
+                    return; // Stop the purchase process
+                }
+
+                // --- Reservation Successful --- 
+                console.log(`[Resale App] Ticket ${ticket.ticketID} reserved successfully.`);
+                // Immediately update local status (optional but good for UI feedback)
+                const reservedTicketIndex = this.resaleTicketsAvailable.findIndex(t => t.ticketID === ticket.ticketID);
+                if (reservedTicketIndex !== -1) {
+                    this.resaleTicketsAvailable[reservedTicketIndex].status = 'reserved';
+                }
+                
+                // --- Step 2: Proceed to Payment (Placeholder) --- 
+                alert(`Ticket ${ticket.ticketID} reserved! Proceeding to payment for $${ticket.resalePrice}... (Payment Implementation Pending)`);
+                // TODO: Initiate Stripe Checkout for ticket.resalePrice
+                // TODO: On successful payment, call POST /buyresaleticket/{ticketID} with payment details & userID
+                // TODO: If payment fails/is cancelled, maybe PUT status back to 'available'?
+
+            } catch (error) {
+                console.error(`[Resale App] Network error reserving ticket ${ticket.ticketID}:`, error);
+                alert(`Network error trying to reserve ticket: ${error.message}`);
+            }
         }
     }
 });

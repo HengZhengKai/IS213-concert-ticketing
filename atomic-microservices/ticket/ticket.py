@@ -237,6 +237,25 @@ app.add_url_rule(
     view_func=GraphQLView.as_view('graphql', schema=schema, graphiql=True)
 )
 
+# === REST Endpoints ===
+
+@app.route('/tickets/resale', methods=['GET'])
+def get_resale_tickets():
+    """Get all tickets currently listed for resale (status='available')."""
+    try:
+        resale_tickets = Ticket.objects(status="available")
+        
+        if not resale_tickets:
+            # It's okay if none are available, return empty list
+            return jsonify({"code": 200, "data": {"tickets": []}}), 200 
+
+        tickets_data = [ticket.to_json() for ticket in resale_tickets]
+        return jsonify({"code": 200, "data": {"tickets": tickets_data}}), 200
+        
+    except Exception as e:
+        logger.error(f"Error retrieving resale tickets: {str(e)}")
+        return jsonify({"code": 500, "message": f"Error retrieving resale tickets: {str(e)}"}), 500
+
 @app.route('/tickets/<string:eventID>/<string:eventDateTime>')
 def get_available_tickets(eventID, eventDateTime):
     '''get tickets with available status'''
@@ -315,12 +334,27 @@ def update_ticket(ticketID):
 
     # If the status is being updated, check for conflicts
     if 'status' in data:
-        if data['status'] == ticket.status and ticket.status == "paid":
+        new_status = data['status']
+        current_status = ticket.status
+        
+        # Prevent setting paid back to paid (existing check)
+        if new_status == current_status and current_status == "paid":
             return jsonify({
                 "code": 409,
                 "data": {"ticketID": ticketID},
-                "message": f"Ticket is already {ticket.status}."
+                "message": f"Ticket is already {current_status}."
             }), 409
+            
+        # --- Add check for reserving resale tickets ---
+        # Allow update to 'reserved' ONLY if current status is 'available'
+        if new_status == 'reserved' and current_status != 'available':
+            logger.warning(f"Attempt to reserve ticket {ticketID} failed. Current status is '{current_status}', not 'available'.")
+            return jsonify({
+                "code": 409, # Conflict
+                "data": {"ticketID": ticketID},
+                "message": f"Ticket cannot be reserved. Current status: {current_status}."
+            }), 409
+        # --- End check for reserving ---
 
     # Update the ticket with new values from the request
     try:
