@@ -9,16 +9,23 @@ from invokes import invoke_http
 import time
 import logging
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+
 app = Flask(__name__)
 
 CORS(app)
 
-rabbitmq_host = os.getenv("RABBITMQ_HOST", "rabbitmq")
-credentials = pika.PlainCredentials('guest', 'guest')
-
 # Determine if we're running in Docker or locally
 is_docker = os.getenv("DOCKER_ENV", "false").lower() == "true"
-base_url = "http://kong:8000" if is_docker else "http://localhost:8000"
+base_url = "http://kong:8000" if is_docker else "http://localhost:8000"  # Changed back to 8000
+rabbitmq_host = "rabbitmq" if is_docker else "localhost"
+
+credentials = pika.PlainCredentials('guest', 'guest')
 
 event_URL = f"{base_url}/event"
 seat_URL = f"{base_url}/seat"
@@ -28,30 +35,40 @@ user_URL = f"{base_url}/user"
 payment_URL = f"{base_url}/payment"
 email_URL = f"{base_url}/email"
 
-logger = logging.getLogger(__name__)
+# Add debug info
+print(f"Service URLs:")
+print(f"Event URL: {event_URL}")
+print(f"Ticket URL: {ticket_URL}")
+print(f"User URL: {user_URL}")
+print(f"Transaction URL: {transaction_URL}")
 
 def get_rabbitmq_connection():
     """Get a RabbitMQ connection with retry logic"""
-    for attempt in range(5):
-        try:
-            logger.info(f"Connecting to RabbitMQ at {rabbitmq_host} (Attempt {attempt + 1})...")
-            parameters = pika.ConnectionParameters(
-                host=rabbitmq_host,
-                credentials=credentials,
-                connection_attempts=3,
-                retry_delay=5,
-                heartbeat=600,
-                blocked_connection_timeout=300
-            )
-            connection = pika.BlockingConnection(parameters)
-            channel = connection.channel()
-            logger.info("Successfully connected to RabbitMQ.")
-            return connection, channel
-        except pika.exceptions.AMQPConnectionError as e:
-            logger.error(f"Connection failed: {e}")
-            if attempt < 4:  # Don't sleep on the last attempt
-                time.sleep(5)
-    raise Exception("Could not connect to RabbitMQ after multiple attempts.")
+    try:
+        for attempt in range(5):
+            try:
+                logger.info(f"Connecting to RabbitMQ at {rabbitmq_host} (Attempt {attempt + 1})...")
+                parameters = pika.ConnectionParameters(
+                    host=rabbitmq_host,
+                    credentials=credentials,
+                    connection_attempts=3,
+                    retry_delay=5,
+                    heartbeat=600,
+                    blocked_connection_timeout=300
+                )
+                connection = pika.BlockingConnection(parameters)
+                channel = connection.channel()
+                logger.info("Successfully connected to RabbitMQ.")
+                return connection, channel
+            except pika.exceptions.AMQPConnectionError as e:
+                logger.error(f"Connection failed: {e}")
+                if attempt < 4:  # Don't sleep on the last attempt
+                    time.sleep(5)
+        logger.warning("Could not connect to RabbitMQ after multiple attempts, continuing without it...")
+        return None, None
+    except Exception as e:
+        logger.warning(f"Error connecting to RabbitMQ: {e}, continuing without it...")
+        return None, None
 
 # Initialize RabbitMQ connection
 connection, channel = get_rabbitmq_connection()
@@ -69,6 +86,10 @@ def ensure_rabbitmq_connection():
 
 def publish_to_rabbitmq(exchange, routing_key, body):
     """Publish message to RabbitMQ with connection handling"""
+    if connection is None or channel is None:
+        logger.warning("RabbitMQ not available, skipping message publishing")
+        return
+        
     try:
         ensure_rabbitmq_connection()
         channel.basic_publish(
@@ -82,7 +103,7 @@ def publish_to_rabbitmq(exchange, routing_key, body):
         logger.info(f"Successfully published message to {exchange} with routing key {routing_key}")
     except Exception as e:
         logger.error(f"Error publishing to RabbitMQ: {e}")
-        raise
+        # Don't raise the exception, just log it
 
 #app route: http://localhost:5100/buyticket
 @app.route("/buyticket", methods=['POST'])
@@ -90,30 +111,39 @@ def buy_ticket():
     if request.is_json:
         try:
             data = request.get_json()
-            required_fields = ["userID",
-                               "eventName",
-                               "eventID",
-                               "eventDateTime",
-                               "seatNo",
-                               "seatCategory",
-                               "price",
-                               "paymentID"] # userID + eventName + paymentID + all fields in seat except for status
-    
+            required_fields = ["userID", "eventName", "eventID", "eventDateTime", "seats"]
+
             if not all(field in data for field in required_fields):
                 return jsonify({"code": 400, "message": "Missing required fields."}), 400
 
-            # 1. Send seat info
             userID = data["userID"]
             eventName = data["eventName"]
             eventID = data["eventID"]
             eventDateTime = data["eventDateTime"]
-            seatNo = data["seatNo"]
-            seatCategory = data["seatCategory"]
-            price = data["price"]
-            paymentID = data["paymentID"]            
+            seats = data["seats"]
 
-            result = process_buy_ticket(userID, eventName, eventID, eventDateTime, seatNo, seatCategory, price, paymentID)
-            return jsonify(result), result["code"]
+            # Step 1: Initialize an empty list to store results
+            results = []
+
+            # Step 2: Iterate through each seat and call process_buy_ticket for each one
+            for seat in seats:
+                seatNo = seat["seatNo"]
+                seatCategory = seat["seatCategory"]
+                price = seat["price"]
+                paymentID = seat["paymentID"]
+
+                # Step 3: Call process_buy_ticket for each seat
+                result = process_buy_ticket(userID, eventName, eventID, eventDateTime, seatNo, seatCategory, price, paymentID)
+
+                # Collect the result of each ticket purchase
+                results.append(result)
+
+            # Step 4: Return the results of all ticket purchases
+            return jsonify({
+                "code": 200,
+                "data": results,
+                "message": "Ticket purchase successful for all seats."
+            }), 200
 
         except Exception as e:
             exc_type, exc_obj, exc_tb = sys.exc_info()
@@ -126,12 +156,12 @@ def buy_ticket():
                 "message": f"Unexpected error: {str(e)}"
             }), 500
 
-
-    # if reached here, not a JSON request.
     return jsonify({
         "code": 400,
         "message": "Invalid JSON input: " + str(request.get_data())
     }), 400
+
+
 
 def process_buy_ticket(userID, eventName, eventID, eventDateTime, seatNo, seatCategory, price, paymentID):
     try:
@@ -305,6 +335,11 @@ def process_buy_ticket(userID, eventName, eventID, eventDateTime, seatNo, seatCa
             "code": 500,
             "message": f"Error processing ticket: {str(e)}"
         }
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5100, debug=True)
+
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5100, debug=True)
