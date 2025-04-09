@@ -333,6 +333,108 @@ def handle_ticket_purchase(ch, method, properties, body):
         logger.error(f"Error processing ticket purchase: {e}", exc_info=True)
         ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
 
+def handle_ticket_resale(ch, method, properties, body):
+    """Handle ticket resale email"""
+    try:
+        logger.info(f"Received ticket resale message: {body}")
+        
+        # Generate a unique message ID from the body
+        message_id = hash(body)
+        
+        # Check if we've already processed this message
+        if message_id in processed_messages:
+            logger.info("Duplicate message detected, acknowledging and skipping")
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+            return
+            
+        data = json.loads(body)
+        logger.info(f"Processing ticket resale for buyer {data.get('buyer_id', 'Unknown')} and seller {data.get('seller_id', 'Unknown')}")
+        logger.info(f"Full message data: {json.dumps(data, indent=2)}")
+        
+        # Get required data
+        buyer_id = data.get('buyer_id')
+        buyer_name = data.get('buyer_name', 'Customer')
+        buyer_email = data.get('buyer_email')
+        seller_id = data.get('seller_id')
+        seller_name = data.get('seller_name', 'Seller')
+        seller_email = data.get('seller_email')
+        ticket_id = data.get('ticket_id')
+        event_id = data.get('event_id')
+        event_name = data.get('event_name')
+        event_date = data.get('event_date')
+        seat_no = data.get('seat_no')
+        seat_category = data.get('seat_category')
+        price = data.get('price', 0)
+        refund_amount = data.get('refund_amount', 0)
+        
+        logger.info(f"Buyer email: {buyer_email}, Seller email: {seller_email}")
+        
+        # Verify we have all required data
+        if not all([buyer_email, seller_email, ticket_id, event_name, event_date, seat_no, seat_category, price]):
+            missing_fields = [field for field in ['buyer_email', 'seller_email', 'ticket_id', 'event_name', 'event_date', 'seat_no', 'seat_category', 'price'] 
+                            if not data.get(field)]
+            logger.error(f"Missing required data in ticket resale message: {missing_fields}")
+            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=False)
+            return
+        
+        # Create email content for buyer
+        buyer_subject = f"Your Resale Ticket Purchase for {event_name}"
+        buyer_html_content = f"""
+        <html>
+        <body>
+            <h2>Your Resale Ticket Purchase Confirmation</h2>
+            <p>Thank you for your purchase, {buyer_name}!</p>
+            <p>Event: <strong>{event_name}</strong> (ID: {event_id})</p>
+            <p>Date: {event_date}</p>
+            <p>Ticket ID: {ticket_id}</p>
+            <p>Seat: {seat_no}</p>
+            <p>Category: {seat_category}</p>
+            <p>Price: ${price}</p>
+            <p>Please show this email or your ticket ID when checking in.</p>
+        </body>
+        </html>
+        """
+        
+        # Create email content for seller
+        seller_subject = f"Your Ticket Has Been Resold - {event_name}"
+        seller_html_content = f"""
+        <html>
+        <body>
+            <h2>Your Ticket Has Been Successfully Resold</h2>
+            <p>Hello {seller_name},</p>
+            <p>Your ticket for the following event has been successfully resold:</p>
+            <p>Event: <strong>{event_name}</strong> (ID: {event_id})</p>
+            <p>Date: {event_date}</p>
+            <p>Ticket ID: {ticket_id}</p>
+            <p>Seat: {seat_no}</p>
+            <p>Category: {seat_category}</p>
+            <p>Refund Amount: ${refund_amount}</p>
+            <p>The refund will be processed to your original payment method.</p>
+        </body>
+        </html>
+        """
+        
+        logger.info(f"Attempting to send email to buyer {buyer_email}")
+        buyer_success = send_email(buyer_email, buyer_subject, buyer_html_content)
+        logger.info(f"Buyer email send result: {buyer_success}")
+        
+        logger.info(f"Attempting to send email to seller {seller_email}")
+        seller_success = send_email(seller_email, seller_subject, seller_html_content)
+        logger.info(f"Seller email send result: {seller_success}")
+        
+        # Acknowledge or negative acknowledge based on email send results
+        if buyer_success and seller_success:
+            processed_messages.add(message_id)  # Mark message as processed
+            ch.basic_ack(delivery_tag=method.delivery_tag)
+            logger.info(f"Ticket resale emails processed successfully for buyer {buyer_id} and seller {seller_id}")
+        else:
+            ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+            logger.error(f"Failed to send ticket resale emails. Buyer success: {buyer_success}, Seller success: {seller_success}")
+        
+    except Exception as e:
+        logger.error(f"Error processing ticket resale: {e}", exc_info=True)
+        ch.basic_nack(delivery_tag=method.delivery_tag, requeue=True)
+
 def handle_waitlist_notification(ch, method, properties, body):
     """Handle waitlist notification email"""
     try:
@@ -408,6 +510,13 @@ def start_consuming():
         rabbitmq_channel.basic_consume(
             queue='email.ticket.purchase',
             on_message_callback=handle_ticket_purchase,
+            auto_ack=False
+        )
+        
+        # Set up consumer for ticket resale queue
+        rabbitmq_channel.basic_consume(
+            queue='email.ticket.resale',
+            on_message_callback=handle_ticket_resale,
             auto_ack=False
         )
         

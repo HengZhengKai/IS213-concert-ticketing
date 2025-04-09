@@ -154,10 +154,6 @@ class EventDetails(graphene.ObjectType):
     eventName = graphene.String()
     eventDateTime = graphene.DateTime()
 
-class OwnerDetails(graphene.ObjectType):
-    ownerID = graphene.String()
-    ownerName = graphene.String()
-
 class Query(graphene.ObjectType):
     """
     GraphQL Query class to fetch ticket details.
@@ -170,10 +166,6 @@ class Query(graphene.ObjectType):
     Example Queries:
     ```
     query {
-        paymentId(ticketID: "T001")
-    }
-
-    query {
         isCheckedIn(ticketID: "T001")
     }
 
@@ -184,26 +176,10 @@ class Query(graphene.ObjectType):
             eventDateTime
         }
     }
-
-    query {
-        ownerDetails(ticketID: "T001") {
-            ownerID
-            ownerName
-        }
-    }
     ```
     """
-    payment_id = graphene.String(ticketID=graphene.String(required=True))
     is_checked_in = graphene.Boolean(ticketID=graphene.String(required=True))
     event_details = graphene.Field(EventDetails, ticketID=graphene.String(required=True))
-    owner_details = graphene.Field(EventDetails, ticketID=graphene.String(required=True))
-
-    # Query for paymentID
-    def resolve_payment_id(self, info, ticketID):
-        ticket = Ticket.objects(ticketID=ticketID).first()
-        if ticket:
-            return ticket.paymentID
-        return None  # If no ticket found, return None
 
     # Query for isCheckedIn
     def resolve_is_checked_in(self, info, ticketID):
@@ -218,14 +194,6 @@ class Query(graphene.ObjectType):
         ticket = Ticket.objects(ticketID=ticketID).first()
         if ticket:
             return EventDetails(eventID=ticket.eventID, eventName=ticket.eventName, eventDateTime=ticket.eventDateTime)
-        return None 
-    
-    # Query for ownerDetails
-    def resolve_owner_details(self, info, ticketID):
-        """Resolves owner details (ownerID and owner name) for the given ticketID."""
-        ticket = Ticket.objects(ticketID=ticketID).first()
-        if ticket:
-            return OwnerDetails(ownerID=ticket.ownerID, ownerName=ticket.ownerName)
         return None 
     
 # Define the schema
@@ -313,15 +281,6 @@ def update_ticket(ticketID):
     # Get the request data to update
     data = request.get_json()
 
-
-    # Check if the ticket is already checked in
-    if ticket.isCheckedIn and 'isCheckedIn' not in data:
-        return jsonify({
-            "code": 409,
-            "data": {"ticketID": ticketID},
-            "message": "Ticket is already checked in and cannot be modified."
-        }), 409
-
     # Validate resalePrice if present in the request
     if 'resalePrice' in data:
         new_resale_price = data['resalePrice']
@@ -331,30 +290,6 @@ def update_ticket(ticketID):
                 "data": {"ticketID": ticketID},
                 "message": "Resale price cannot be higher than the original price or the previous resale price."
             }), 400
-
-    # If the status is being updated, check for conflicts
-    if 'status' in data:
-        new_status = data['status']
-        current_status = ticket.status
-        
-        # Prevent setting paid back to paid (existing check)
-        if new_status == current_status and current_status == "paid":
-            return jsonify({
-                "code": 409,
-                "data": {"ticketID": ticketID},
-                "message": f"Ticket is already {current_status}."
-            }), 409
-            
-        # --- Add check for reserving resale tickets ---
-        # Allow update to 'reserved' ONLY if current status is 'available'
-        if new_status == 'reserved' and current_status != 'available':
-            logger.warning(f"Attempt to reserve ticket {ticketID} failed. Current status is '{current_status}', not 'available'.")
-            return jsonify({
-                "code": 409, # Conflict
-                "data": {"ticketID": ticketID},
-                "message": f"Ticket cannot be reserved. Current status: {current_status}."
-            }), 409
-        # --- End check for reserving ---
 
     # Update the ticket with new values from the request
     try:

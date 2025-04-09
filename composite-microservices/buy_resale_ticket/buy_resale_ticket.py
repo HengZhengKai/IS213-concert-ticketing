@@ -9,6 +9,7 @@ from invokes import invoke_http
 import time
 import logging
 from requests.exceptions import ConnectionError, RequestException
+from pika.exceptions import AMQPConnectionError, AMQPChannelError
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.DEBUG)
@@ -30,36 +31,74 @@ transaction_URL = f"{base_url}/transaction"
 user_URL = f"{base_url}/user"
 payment_URL = f"{base_url}"
 
-for attempt in range(5):
-    try:
-        print(f"Connecting to RabbitMQ at {rabbitmq_host} (Attempt {attempt + 1})...")
-        parameters = pika.ConnectionParameters(host=rabbitmq_host, credentials=credentials)
-        connection = pika.BlockingConnection(parameters)
-        channel = connection.channel()
-        print("Successfully connected to RabbitMQ.")
-        break
-    except pika.exceptions.AMQPConnectionError as e:
-        print(f"Connection failed: {e}")
-        time.sleep(5)
-else:
+def get_rabbitmq_connection():
+    """Get a RabbitMQ connection with retry logic"""
+    for attempt in range(5):
+        try:
+            logger.info(f"Connecting to RabbitMQ at {rabbitmq_host} (Attempt {attempt + 1})...")
+            parameters = pika.ConnectionParameters(
+                host=rabbitmq_host,
+                credentials=credentials,
+                connection_attempts=3,
+                retry_delay=5,
+                heartbeat=600,
+                blocked_connection_timeout=300
+            )
+            connection = pika.BlockingConnection(parameters)
+            channel = connection.channel()
+            logger.info("Successfully connected to RabbitMQ.")
+            return connection, channel
+        except pika.exceptions.AMQPConnectionError as e:
+            logger.error(f"Connection failed: {e}")
+            if attempt < 4:  # Don't sleep on the last attempt
+                time.sleep(5)
     raise Exception("Could not connect to RabbitMQ after multiple attempts.")
-    exit(1)
 
-def make_request_with_retry(url, method='GET', json=None, max_retries=3, retry_delay=1):
+# Initialize RabbitMQ connection
+connection, channel = get_rabbitmq_connection()
+
+def ensure_rabbitmq_connection():
+    """Ensure RabbitMQ connection is active, reconnect if necessary"""
+    global connection, channel
+    try:
+        if not connection or connection.is_closed:
+            logger.warning("RabbitMQ connection lost, attempting to reconnect...")
+            connection, channel = get_rabbitmq_connection()
+    except Exception as e:
+        logger.error(f"Error checking RabbitMQ connection: {e}")
+        connection, channel = get_rabbitmq_connection()
+
+def publish_to_rabbitmq(exchange, routing_key, body):
+    """Publish message to RabbitMQ with connection handling"""
+    try:
+        ensure_rabbitmq_connection()
+        channel.basic_publish(
+            exchange=exchange,
+            routing_key=routing_key,
+            body=json.dumps(body),
+            properties=pika.BasicProperties(
+                delivery_mode=2,  # make message persistent
+            )
+        )
+        logger.info(f"Successfully published message to {exchange} with routing key {routing_key}")
+    except Exception as e:
+        logger.error(f"Error publishing to RabbitMQ: {e}")
+        raise
+
+def invoke_http_with_retry(url, method='GET', json=None, max_retries=3, retry_delay=1):
     for attempt in range(max_retries):
         try:
-            response = requests.request(method, url, json=json, timeout=10)
-            return response.json()
-        except ConnectionError as e:
+            result = invoke_http(url, method=method, json=json)
+            if isinstance(result, dict) and result.get('code') in [500, 502, 503, 504]:
+                raise Exception(f"Service returned error code: {result.get('code')}")
+            return result
+        except Exception as e:
             if attempt == max_retries - 1:
+                logger.error(f"Request failed after {max_retries} attempts: {e}")
                 raise
-            print(f"Connection error (attempt {attempt + 1}/{max_retries}): {str(e)}")
+            logger.warning(f"Request failed (attempt {attempt + 1}/{max_retries}): {e}")
             time.sleep(retry_delay)
-        except RequestException as e:
-            if attempt == max_retries - 1:
-                raise
-            print(f"Request error (attempt {attempt + 1}/{max_retries}): {str(e)}")
-            time.sleep(retry_delay)
+
 
 @app.route("/buyresaleticket/<string:ticketID>", methods=['POST'])
 def buy_resale_ticket(ticketID):
@@ -118,26 +157,26 @@ def buy_resale_ticket(ticketID):
 
 def process_buy_resale_ticket(userID, ticketID, paymentID):
     try:
-        print(f"\n=== Starting process_buy_resale_ticket ===")
-        print(f"Parameters: userID={userID}, ticketID={ticketID}, paymentID={paymentID}")
+        logger.info(f"\n=== Starting process_buy_resale_ticket ===")
+        logger.info(f"Parameters: userID={userID}, ticketID={ticketID}, paymentID={paymentID}")
         
         # Step 2-3: Get user name and email from userID
-        print(f'\n-----Invoking user microservice for user {userID}-----')
+        logger.info(f'\n-----Invoking user microservice for user {userID}-----')
         try:
-            user = invoke_http(f"{user_URL}/{userID}")
+            user = invoke_http_with_retry(f"{user_URL}/{userID}")
         except Exception as e:
-            return {"code": 500, "message": f"DEBUGGING: Error calling user service: {str(e)}"}
+            logger.error(f"Error calling user service: {e}")
+            return {"code": 500, "message": f"Error retrieving user details: {str(e)}"}
             
         userName = user["data"]["name"]
         userEmail = user["data"]["email"]
-        print(f"Retrieved user details: name={userName}, email={userEmail}")
+        logger.info(f"Retrieved user details: name={userName}, email={userEmail}")
         
         # Step 4-5: Get ticket details
-        print(f'\n-----Invoking ticket microservice for ticket {ticketID}-----')
+        logger.info(f'\n-----Invoking ticket microservice for ticket {ticketID}-----')
         ticket_url = f"{ticket_URL}/{ticketID}"
-        print(f"Calling ticket URL: {ticket_url}")
         try:
-            ticket = invoke_http(ticket_url)
+            ticket = invoke_http_with_retry(ticket_url)
                 
             # Check if ticket is already paid
             if ticket["data"].get("status") == "paid":
@@ -146,9 +185,11 @@ def process_buy_resale_ticket(userID, ticketID, paymentID):
                     "message": "Ticket is already paid and cannot be updated."
                 }
         except Exception as e:
-            return {"code": 500, "message": f"DEBUGGING: Error calling ticket service: {str(e)}"}
+            logger.error(f"Error calling ticket service: {e}")
+            return {"code": 500, "message": f"Error retrieving ticket details: {str(e)}"}
         
         try:
+            # Get ticket details and ensure price is available
             sellerID = ticket["data"]["ownerID"]
             sellerName = ticket["data"]["ownerName"]
             eventID = ticket["data"]["eventID"]
@@ -156,29 +197,44 @@ def process_buy_resale_ticket(userID, ticketID, paymentID):
             eventDateTime = ticket["data"]["eventDateTime"]
             seatNo = ticket["data"]["seatNo"]
             seatCategory = ticket["data"]["seatCategory"]
-            price = ticket["data"]["price"]
+            price = float(ticket["data"]["price"])  # Original price
             resalePrice = ticket["data"]["resalePrice"]
+            if resalePrice is not None:
+                resalePrice = float(resalePrice)
+            else:
+                resalePrice = price
             original_paymentID = ticket["data"]["paymentID"]
-            print(f"Ticket details: sellerID={sellerID}, eventID={eventID}, resalePrice={resalePrice}")
+            logger.info(f"Ticket details: sellerID={sellerID}, eventID={eventID}, price={price}, resalePrice={resalePrice}")
+
+            # Get seller's email
+            logger.info(f'\n-----Invoking user microservice for seller {sellerID}-----')
+            try:
+                seller = invoke_http_with_retry(f"{user_URL}/{sellerID}")
+                sellerEmail = seller["data"]["email"]
+                logger.info(f"Retrieved seller details: name={sellerName}, email={sellerEmail}")
+            except Exception as e:
+                logger.error(f"Error getting seller details: {e}")
+                return {"code": 500, "message": f"Error retrieving seller details: {str(e)}"}
+
         except KeyError as e:
-            print(f"Failed to extract ticket details. Missing key: {e}")
-            print(f"Full ticket response: {ticket}")
-            return {"code": 500, "message": f"DEBUGGING: Invalid ticket data structure: missing {e}"}
+            logger.error(f"Failed to extract ticket details. Missing key: {e}")
+            logger.error(f"Full ticket response: {ticket}")
+            return {"code": 500, "message": f"Invalid ticket data structure: missing {e}"}
         
         # Step 6-7. Update ticket for user
-        print(f'\n-----Updating ticket {ticketID} for user {userID}-----')
+        logger.info(f'\n-----Updating ticket {ticketID} for user {userID}-----')
         
         # Check ticket conditions before update
         if ticket['data']['isCheckedIn']:
             return {
                 "code": 409,
-                "message": "DEBUGGING: Ticket is already checked in and cannot be modified."
+                "message": "Ticket is already checked in and cannot be modified."
             }
             
         if ticket['data']['status'] != 'available':
             return {
                 "code": 409,
-                "message": f"DEBUGGING: Ticket cannot be updated. Current status: {ticket['data']['status']}"
+                "message": f"Ticket cannot be updated. Current status: {ticket['data']['status']}"
             }
             
         update_data = {
@@ -188,30 +244,57 @@ def process_buy_resale_ticket(userID, ticketID, paymentID):
             "paymentID": paymentID,
             "isCheckedIn": False
         }
-        print(f"Update data being sent: {json.dumps(update_data, indent=2)}")
-        ticket_result = invoke_http(f"{ticket_URL}/{ticketID}", method='PUT', json=update_data)
-        print(f"Raw ticket update response: {json.dumps(ticket_result, indent=2)}")
+        logger.info(f"Update data being sent: {json.dumps(update_data, indent=2)}")
         
-        if not isinstance(ticket_result, dict):
-            return {
-                "code": 500,
-                "message": f"DEBUGGING: Invalid response type from ticket update: {type(ticket_result)}"
-            }
+        try:
+            reserve_data = {"status": "paid"}
+            reserve_result = invoke_http_with_retry(f"{ticket_URL}/{ticketID}", method='PUT', json=reserve_data)
             
-        if ticket_result.get("code") != 200:
-            return {
-                "code": ticket_result.get("code", 500),
-                "message": f"DEBUGGING: Unexpected response code: {ticket_result.get('code')}"
-            }
+            if not isinstance(reserve_result, dict) or reserve_result.get("code") != 200:
+                return {
+                    "code": 500,
+                    "message": f"Failed to reserve ticket: {reserve_result.get('message', 'Unknown error')}"
+                }
+            
+            # Then, update with the full data
+            ticket_result = invoke_http_with_retry(f"{ticket_URL}/{ticketID}", method='PUT', json=update_data)
+            
+            if not isinstance(ticket_result, dict):
+                return {
+                    "code": 500,
+                    "message": f"Invalid response type from ticket update: {type(ticket_result)}"
+                }
+                
+            if ticket_result.get("code") != 200:
+                return {
+                    "code": ticket_result.get("code", 500),
+                    "message": f"Unexpected response code: {ticket_result.get('code')}"
+                }
+        except Exception as e:
+            logger.error(f"Error updating ticket: {e}")
+            # Try to revert the ticket status back to available if the update failed
+            try:
+                revert_data = {"status": "available"}
+                invoke_http_with_retry(f"{ticket_URL}/{ticketID}", method='PUT', json=revert_data)
+            except Exception as revert_error:
+                logger.error(f"Failed to revert ticket status: {revert_error}")
+            return {"code": 500, "message": f"Error updating ticket: {str(e)}"}
 
         # Step 8-9: Invoke payment service to refund charge
-        print(f'\n-----Invoking payment microservice for refund {original_paymentID}-----')
-        refund_result = invoke_http(f"{payment_URL}/makerefund", method='POST', json={"payment_intent": original_paymentID})
+        logger.info(f'\n-----Invoking payment microservice for refund {original_paymentID}-----')
+        try:
+            refund_result = invoke_http_with_retry(
+                f"{payment_URL}/makerefund", 
+                method='POST', 
+                json={"payment_intent": original_paymentID}
+            )
+        except Exception as e:
+            logger.error(f"Error processing refund: {e}")
+            return {"code": 500, "message": f"Error processing refund: {str(e)}"}
 
         # Step 10-11: Log purchase and refund transactions
-        transaction_code = None
-        while transaction_code == None or transaction_code == 409:
-            print('\n-----Creating new transaction-----')
+        try:
+            # Create purchase transaction
             purchase_transactionID = "Trans" + str(uuid.uuid4())[:7]
             transaction_data = {
                 "transactionID": purchase_transactionID,
@@ -221,13 +304,9 @@ def process_buy_resale_ticket(userID, ticketID, paymentID):
                 "paymentID": paymentID,
                 "amount": resalePrice
             }
-            transaction_result = invoke_http(f"{transaction_URL}", method="POST", json=transaction_data)
-            transaction_code = transaction_result["code"]
+            invoke_http_with_retry(f"{transaction_URL}", method="POST", json=transaction_data)
 
-        # refund transaction
-        transaction_code = None
-        while transaction_code == None or transaction_code == 409:
-            print('\n-----Creating new transaction-----')
+            # Create refund transaction
             refund_transactionID = "Ref" + str(uuid.uuid4())[:7]
             transaction_data = {
                 "transactionID": refund_transactionID,
@@ -237,32 +316,41 @@ def process_buy_resale_ticket(userID, ticketID, paymentID):
                 "paymentID": original_paymentID,
                 "amount": resalePrice
             }
-            transaction_result = invoke_http(f"{transaction_URL}", method="POST", json=transaction_data)
-            transaction_code = transaction_result["code"]
+            invoke_http_with_retry(f"{transaction_URL}", method="POST", json=transaction_data)
+        except Exception as e:
+            logger.error(f"Error creating transactions: {e}")
+            return {"code": 500, "message": f"Error creating transactions: {str(e)}"}
 
         # Step 12-13: Email buyers and sellers asynchronously
-        print('\n-----Invoking email service through AMQP-----')
-        payload = {
-            "buyer_id": userID,
-            "buyer_name": userName,
-            "seller_id": sellerID,
-            "seller_name": sellerName,
-            "ticket_id": ticketID,
-            "event_id": eventID,
-            "event_name": eventName,
-            "event_date": eventDateTime,
-            "seat_no": seatNo,
-            "seat_category": seatCategory,
-            "price": resalePrice,
-            "charge_id": paymentID,
-            "refund_amount": resalePrice
-        }
+        logger.info('\n-----Invoking email service through AMQP-----')
 
-        channel.basic_publish(
-            exchange="ticketing",
-            routing_key="ticket.resold",
-            body=json.dumps(payload)
-        )
+        # Publish the message
+        try:
+            publish_to_rabbitmq(
+                exchange='ticketing',
+                routing_key='ticket.resold',
+                body={
+                    "buyer_id": userID,
+                    "buyer_name": userName,
+                    "buyer_email": userEmail,
+                    "seller_id": sellerID,
+                    "seller_name": sellerName,
+                    "seller_email": sellerEmail,
+                    "ticket_id": ticketID,
+                    "event_id": eventID,
+                    "event_name": eventName,
+                    "event_date": eventDateTime,
+                    "seat_no": seatNo,
+                    "seat_category": seatCategory,
+                    "price": resalePrice,  
+                    "refund_amount": resalePrice 
+                },
+            )
+        except Exception as e:
+            logger.error(f"Error sending email notification: {e}")
+            logger.error(f"Full error details: {str(e)}", exc_info=True)
+            # Don't fail the whole transaction if email fails
+            pass
 
         # Step 14: Return success response
         return {
@@ -275,11 +363,12 @@ def process_buy_resale_ticket(userID, ticketID, paymentID):
         }
 
     except Exception as e:
-        # Catch any unhandled exceptions
+        logger.error(f"Internal error occurred during ticket purchase: {e}")
         return {
             "code": 500,
             "message": f"Internal error occurred during ticket purchase: {str(e)}"
         }
+
 if __name__ == "__main__":
     # Set up logging
     logging.basicConfig(
