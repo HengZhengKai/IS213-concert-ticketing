@@ -101,7 +101,7 @@
             }
         
             try {
-                const verifyRes = await fetch(`http://localhost:5007/verify-payment?session_id=${sessionId}`);
+                const verifyRes = await fetch(`http://localhost:8000/verify-payment?session_id=${sessionId}`);
                 const verifyData = await verifyRes.json();
         
                 if (!verifyRes.ok || !verifyData.payment_intent_id) {
@@ -110,7 +110,7 @@
         
                 const paymentIntentID = verifyData.payment_intent_id;
         
-                const response = await fetch(`http://localhost:5102/buyresaleticket/${ticketID}`, {
+                const response = await fetch(`http://localhost:8000/buyresaleticket/${ticketID}`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
