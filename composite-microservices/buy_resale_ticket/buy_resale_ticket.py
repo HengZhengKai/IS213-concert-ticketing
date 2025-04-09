@@ -9,6 +9,7 @@ from invokes import invoke_http
 import time
 import logging
 from requests.exceptions import ConnectionError, RequestException
+import stripe
 from pika.exceptions import AMQPConnectionError, AMQPChannelError
 
 app = Flask(__name__)
@@ -17,6 +18,9 @@ logger = logging.getLogger(__name__)
 app.debug = True
 
 CORS(app)
+
+# Initialize Stripe with your secret key
+stripe.api_key = os.getenv('STRIPE_SECRET_KEY', 'your_stripe_secret_key')
 
 rabbitmq_host = os.getenv("RABBITMQ_HOST", "rabbitmq")
 credentials = pika.PlainCredentials('guest', 'guest')
@@ -154,6 +158,45 @@ def buy_resale_ticket(ticketID):
         "code": 400,
         "message": f"Invalid JSON input: {str(request.get_data())}"
     }), 400
+
+# THIS FROM PAYMENT.PY?
+# @app.route("/start-checkout", methods=['POST'])
+# def start_checkout():
+#     if request.is_json:
+#         try:
+#             data = request.get_json()
+            
+#             # Create Stripe Checkout Session
+#             checkout_session = stripe.checkout.Session.create(
+#                 payment_method_types=['card'],
+#                 line_items=[{
+#                     'price_data': {
+#                         'currency': data['currency'],
+#                         'unit_amount': data['amount'],
+#                         'product_data': {
+#                             'name': data['description'],
+#                         },
+#                     },
+#                     'quantity': 1,
+#                 }],
+#                 mode=data['mode'],
+#                 success_url=data['success_url'],
+#                 cancel_url=data['cancel_url'],
+#                 metadata=data['metadata'],
+#             )
+            
+#             return jsonify({'url': checkout_session.url}), 200
+            
+#         except Exception as e:
+#             return jsonify({
+#                 'code': 500,
+#                 'message': f'Error creating checkout session: {str(e)}'
+#             }), 500
+            
+#     return jsonify({
+#         'code': 400,
+#         'message': 'Invalid JSON input'
+#     }), 400
 
 def process_buy_resale_ticket(userID, ticketID, paymentID):
     try:

@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <title>Purchase Successful | Concerts</title>
+    <link rel="icon" type="image/png" href="assets/favicon.png">
+    <!-- Bootstrap core CSS -->
+    <link href="vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Additional CSS Files -->
+    <link rel="stylesheet" href="assets/css/fontawesome.css">
+    <link rel="stylesheet" href="assets/css/templatemo-villa-agency.css">
+    <link rel="stylesheet" href="assets/css/owl.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+    <link rel="stylesheet" href="https://unpkg.com/swiper@7/swiper-bundle.min.css" />
+</head>
+<body>
+    <!-- Header Area Start -->
+    <header class="header-area header-sticky">
+        <div class="container">
+            <div class="row">
+                <div class="col-12">
+                    <nav class="main-nav">
+                        <a href="index.html" class="logo">
+                            <h1>
+                                <span>
+                                    <inline>Events</inline>
+                                </span>
+                            </h1>
+                        </a>
+                        <ul class="nav">
+                            <li><a href="index.html">Buy Ticket</a></li>
+                            <li><a href="check_in.html">Check In</a></li>
+                            <li><a href="resale_ticket.html">Resale</a></li>
+                            <li id="profileLink">
+                                <a href="profile.html" id="profileLinkRedir">
+                                    <i class="fa fa-user" id="profileLinkImg"></i>
+                                    <span id="profileLinkText">Profile</span>
+                                </a>
+                            </li>
+                        </ul>
+                        <a class="menu-trigger"><span>Menu</span></a>
+                    </nav>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <div class="container mt-5 pt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8 text-center">
+                <div class="card">
+                    <div class="card-body">
+                        <h2 class="card-title mb-4">Processing Your Purchase</h2>
+                        <div id="loadingMessage" class="mb-4">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-3">Please wait while we process your purchase...</p>
+                        </div>
+                        <div id="successMessage" class="d-none">
+                            <i class="fa fa-check-circle text-success fa-4x mb-3"></i>
+                            <h3 class="mb-3">Purchase Successful!</h3>
+                            <p class="mb-4">Your ticket has been successfully purchased and added to your account.</p>
+                            <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+                                <a href="my_tickets.html" class="btn btn-primary btn-lg px-4 gap-3">View My Tickets</a>
+                                <a href="index.html" class="btn btn-outline-secondary btn-lg px-4">Back to Home</a>
+                            </div>
+                        </div>
+                        <div id="errorMessage" class="d-none">
+                            <i class="fa fa-exclamation-circle text-danger fa-4x mb-3"></i>
+                            <h3 class="mb-3">Oops! Something went wrong</h3>
+                            <p class="mb-4" id="errorText">We encountered an error while processing your purchase.</p>
+                            <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+                                <a href="resale_ticket.html" class="btn btn-primary btn-lg px-4 gap-3">Try Again</a>
+                                <a href="index.html" class="btn btn-outline-secondary btn-lg px-4">Back to Home</a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="vendor/jquery/jquery.min.js"></script>
+    <script src="vendor/bootstrap/js/bootstrap.min.js"></script>
+    <script src="static/login.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async function() {
+            const urlParams = new URLSearchParams(window.location.search);  // ✅ Define this!
+        
+            const ticketID = urlParams.get('ticketID');
+            const userID = urlParams.get('userID');
+            const sessionId = urlParams.get('session_id');
+        
+            if (!ticketID || !userID || !sessionId) {
+                showError('Missing required parameters');
+                return;
+            }
+        
+            try {
+                const verifyRes = await fetch(`http://localhost:5007/verify-payment?session_id=${sessionId}`);
+                const verifyData = await verifyRes.json();
+        
+                if (!verifyRes.ok || !verifyData.payment_intent_id) {
+                    throw new Error(verifyData.error || 'Could not verify payment');
+                }
+        
+                const paymentIntentID = verifyData.payment_intent_id;
+        
+                const response = await fetch(`http://localhost:5102/buyresaleticket/${ticketID}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('token')}`
+                    },
+                    body: JSON.stringify({
+                        userID: userID,
+                        paymentID: paymentIntentID
+                    })
+                });
+        
+               
+                const data = await response.json();
+        
+                if (response.ok) {
+                    showSuccess();
+                } else {
+                    showError(data.message || 'Failed to complete purchase');
+                }
+            } catch (error) {
+                showError(error.message);
+            }
+        });
+        
+        function showSuccess() {
+            document.getElementById('loadingMessage').classList.add('d-none');
+            document.getElementById('successMessage').classList.remove('d-none');
+        }
+        
+        function showError(message) {
+            document.getElementById('loadingMessage').classList.add('d-none');
+            document.getElementById('errorMessage').classList.remove('d-none');
+            document.getElementById('errorText').textContent = message;
+        }
+        </script>
+        
+</body>
+</html>

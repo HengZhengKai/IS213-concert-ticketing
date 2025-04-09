@@ -58,7 +58,7 @@ def start_checkout():
         response.raise_for_status()
 
         data = response.json()
-        checkout_url = data.get("url") 
+        checkout_url = data.get("url") or data.get("checkout_url")
         if not checkout_url:
             return jsonify({"error": "No checkout URL in response"}), 500
         return jsonify({"checkout_url": checkout_url})

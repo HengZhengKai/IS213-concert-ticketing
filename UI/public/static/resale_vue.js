@@ -1,4 +1,4 @@
-const sellTicketServiceBaseUrl = 'http://localhost:5101'; // Port for sell_ticket composite service
+const sellTicketServiceBaseUrl = 'http://localhost:5102'; // Port for sell_ticket composite service
 const ticketServiceBaseUrl = 'http://localhost:5004'; // Port for ticket service
 
 const app = Vue.createApp({
@@ -194,49 +194,41 @@ const app = Vue.createApp({
         
         async buyResaleTicket(ticket) {
             console.log(`[Resale App] Initiating purchase for ticket:`, ticket);
-            // Add a simple loading/feedback state for the specific button if desired
             
-            // --- Step 1: Attempt to reserve the ticket --- 
             try {
-                console.log(`[Resale App] Attempting to reserve ticket ${ticket.ticketID} by setting status to 'reserved'.`);
-                const reserveResponse = await fetch(`${ticketServiceBaseUrl}/ticket/${ticket.ticketID}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Authorization': `Bearer ${this.token}`, // Assuming reservation requires auth
+                // Step 1: Start Stripe Checkout through payment service
+                const response = await fetch('http://localhost:5007/start-checkout', {
+                    method: 'POST',
+                    headers: { 
                         'Content-Type': 'application/json',
-                        'Accept': 'application/json'
                     },
-                    body: JSON.stringify({ status: 'reserved' })
+                    body: JSON.stringify({
+                        mode: 'payment',
+                        success_url: `${window.location.origin}/buy_success.html?ticketID=${ticket.ticketID}&userID=${this.user.userID}&session_id={CHECKOUT_SESSION_ID}`,
+                        cancel_url: `${window.location.href}`,
+                        currency: 'sgd',
+                        product_name: `Resale Ticket - ${ticket.eventName} (${ticket.seatNo})`,
+                        unit_amount: Math.round(ticket.resalePrice * 100),
+                        quantity: 1
+                    })
                 });
 
-                const reserveData = await reserveResponse.json();
-
-                if (!reserveResponse.ok) {
-                    // Handle failed reservation (e.g., 409 Conflict)
-                    console.error(`[Resale App] Failed to reserve ticket ${ticket.ticketID}:`, reserveData);
-                    alert(`Failed to reserve ticket: ${reserveData.message || 'Another user may have already purchased it.'}`);
-                    // Optional: Refresh the list of available resale tickets
-                    this.loadResaleTickets(); 
-                    return; // Stop the purchase process
+                if (!response.ok) {
+                    throw new Error(`HTTP error ${response.status}`);
                 }
 
-                // --- Reservation Successful --- 
-                console.log(`[Resale App] Ticket ${ticket.ticketID} reserved successfully.`);
-                // Immediately update local status (optional but good for UI feedback)
-                const reservedTicketIndex = this.resaleTicketsAvailable.findIndex(t => t.ticketID === ticket.ticketID);
-                if (reservedTicketIndex !== -1) {
-                    this.resaleTicketsAvailable[reservedTicketIndex].status = 'reserved';
-                }
+                const data = await response.json();
                 
-                // --- Step 2: Proceed to Payment (Placeholder) --- 
-                alert(`Ticket ${ticket.ticketID} reserved! Proceeding to payment for $${ticket.resalePrice}... (Payment Implementation Pending)`);
-                // TODO: Initiate Stripe Checkout for ticket.resalePrice
-                // TODO: On successful payment, call POST /buyresaleticket/{ticketID} with payment details & userID
-                // TODO: If payment fails/is cancelled, maybe PUT status back to 'available'?
+                // Step 2: Redirect to Stripe Checkout
+                if (data.checkout_url) {
+                    window.location.href = data.checkout_url;
+                } else {
+                    throw new Error('No checkout URL received');
+                }
 
             } catch (error) {
-                console.error(`[Resale App] Network error reserving ticket ${ticket.ticketID}:`, error);
-                alert(`Network error trying to reserve ticket: ${error.message}`);
+                console.error(`[Resale App] Error initiating checkout:`, error);
+                alert(`Failed to initiate checkout: ${error.message}`);
             }
         }
     }
