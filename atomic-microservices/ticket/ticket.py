@@ -54,8 +54,8 @@ password = urllib.parse.quote_plus(os.getenv("MONGO_PASSWORD"))
 cluster = os.getenv("MONGO_CLUSTER")
 database = os.getenv("MONGO_DATABASE")
 
-# Construct connection string
-MONGO_URI = f"mongodb+srv://{username}:{password}@{cluster}/{database}?retryWrites=true&w=majority&authSource=admin"
+# Use the MONGO_URI directly from environment if available, otherwise construct it
+MONGO_URI = os.getenv("MONGO_URI") or f"mongodb+srv://{username}:{password}@{cluster}/{database}?retryWrites=true&w=majority"
 
 try:
     # Connect to MongoDB Atlas
@@ -64,6 +64,7 @@ try:
     logger.info("Connected to MongoDB successfully")
 except Exception as e:
     logger.error(f"Failed to connect to MongoDB: {e}")
+    raise  # Re-raise the exception to prevent the service from starting with a bad connection
 
 # Get RabbitMQ host and URI
 # Get RabbitMQ host and URI
@@ -108,6 +109,8 @@ def publish_to_rabbitmq(routing_key, message):
     except Exception as e:
         logger.error(f"Failed to publish to RabbitMQ: {e}")
         return False
+
+# Define MongoDB models
 class Ticket(db.Document): # tell flask what are the fields in your database
     ticketID = db.StringField(primary_key = True)
     ownerID = db.StringField()
@@ -349,8 +352,11 @@ def update_ticket(ticketID):
 @app.route("/ticket/<string:ticketID>", methods=["POST"])
 def create_ticket(ticketID):
     try:
+        logger.info(f"Attempting to create ticket with ID: {ticketID}")
+        
         # Check if ticket already exists
         if Ticket.objects(ticketID=ticketID).first():
+            logger.warning(f"Ticket {ticketID} already exists")
             return jsonify({
                 "code": 409,
                 "data": {"ticketID": ticketID},
@@ -359,6 +365,7 @@ def create_ticket(ticketID):
 
         # Get request data
         data = request.get_json()
+        logger.info(f"Received ticket data: {data}")
 
         # Validate input
         required_fields = ["ownerID",
@@ -373,49 +380,69 @@ def create_ticket(ticketID):
                            "status",
                            "paymentID",
                            "isCheckedIn"] #ticketID in url
-        if any(field not in data for field in required_fields):
+        
+        missing_fields = [field for field in required_fields if field not in data]
+        if missing_fields:
+            logger.error(f"Missing required fields: {missing_fields}")
             return jsonify({
                 "code": 400,
-                "message": "Missing required fields."
+                "message": f"Missing required fields: {', '.join(missing_fields)}"
             }), 400
 
         if not isinstance(data["seatNo"], int):
+            logger.error(f"Invalid seatNo type: {type(data['seatNo'])}")
             return jsonify({
                 "code": 400,
                 "message": "Seat number must be an integer."
             }), 400
     
         if data["seatNo"] <= 0:
+            logger.error(f"Invalid seatNo value: {data['seatNo']}")
             return jsonify({
                 "code": 400,
                 "message": "Seat number must be positive."
             }), 400
 
         if not isinstance(data["price"], (int, float)) or data["price"] < 0:
+            logger.error(f"Invalid price value: {data['price']}")
             return jsonify({
                 "code": 400,
                 "message": "Price must be a non-negative number."
             }), 400
         
-        event_datetime = datetime.fromisoformat(data["eventDateTime"].replace("Z", "+00:00"))
+        try:
+            event_datetime = datetime.fromisoformat(data["eventDateTime"].replace("Z", "+00:00"))
+            logger.info(f"Parsed event datetime: {event_datetime}")
+        except ValueError as e:
+            logger.error(f"Error parsing datetime: {e}")
+            return jsonify({
+                "code": 400,
+                "message": f"Invalid datetime format: {data['eventDateTime']}"
+            }), 400
 
         # Create and save the new ticket
-        ticket = Ticket(
-            ticketID=ticketID,
-            ownerID=data["ownerID"],
-            ownerName=data["ownerName"],
-            eventID=data["eventID"],
-            eventName=data["eventName"],
-            eventDateTime=event_datetime,
-            seatNo=data["seatNo"],
-            seatCategory=data["seatCategory"],
-            price=data["price"],
-            resalePrice=data["resalePrice"],
-            status=data["status"],
-            paymentID=data["paymentID"],
-            isCheckedIn=data["isCheckedIn"]
-        )
-        ticket.save()
+        try:
+            ticket = Ticket(
+                ticketID=ticketID,
+                ownerID=data["ownerID"],
+                ownerName=data["ownerName"],
+                eventID=data["eventID"],
+                eventName=data["eventName"],
+                eventDateTime=event_datetime,
+                seatNo=data["seatNo"],
+                seatCategory=data["seatCategory"],
+                price=data["price"],
+                resalePrice=data["resalePrice"],
+                status=data["status"],
+                paymentID=data["paymentID"],
+                isCheckedIn=data["isCheckedIn"]
+            )
+            logger.info("Attempting to save ticket to database")
+            ticket.save()
+            logger.info("Successfully saved ticket to database")
+        except Exception as e:
+            logger.error(f"Error saving ticket: {str(e)}")
+            raise
 
         # Prepare message for email service
         message = {
@@ -431,7 +458,11 @@ def create_ticket(ticketID):
         }
 
         # Publish to RabbitMQ
-        publish_to_rabbitmq('ticket.purchased', message)
+        logger.info("Attempting to publish to RabbitMQ")
+        if publish_to_rabbitmq('ticket.purchased', message):
+            logger.info("Successfully published to RabbitMQ")
+        else:
+            logger.warning("Failed to publish to RabbitMQ")
 
         # Return successful response
         return jsonify({
@@ -440,8 +471,9 @@ def create_ticket(ticketID):
         }), 201
 
     except Exception as e:
+        logger.error(f"Error in create_ticket: {str(e)}")
         import traceback
-        traceback.print_exc()  # Logs full stack trace
+        logger.error(traceback.format_exc())
         return jsonify({
             "code": 500,
             "data": {"ticketID": ticketID},

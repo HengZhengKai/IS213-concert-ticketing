@@ -156,24 +156,18 @@ services:
     ports:
       - "5100:5100"
     environment:
+      DOCKER_ENV: "true"
       RABBITMQ_HOST: rabbitmq
-      event_service_URL: http://event-service:5001
-      seat_service_URL: http://seat-service:5002
-      waitlist_service_URL: http://waitlist-service:5003
-      ticket_service_URL: http://ticket-service:5004
-      transaction_service_URL: http://transaction-service:5005
-      user_service_URL: http://user-service:5006
-      payment_service_URL: http://payment-service:5007
-      email_service_URL: http://email-service:5008
+      EVENT_SERVICE_URL: http://event-service:5001
+      SEAT_SERVICE_URL: http://seat-service:5002
+      TICKET_SERVICE_URL: http://ticket-service:5003
+      TRANSACTION_SERVICE_URL: http://transaction-service:5004
+      USER_SERVICE_URL: http://user-service:5005
+      PAYMENT_SERVICE_URL: http://payment-service:5007
+      EMAIL_SERVICE_URL: http://email-service:5008
     depends_on:
-      - event-service
-      - seat-service
-      - waitlist-service
-      - ticket-service
-      - transaction-service
-      - user-service
-      - payment-service
-      - email-service
+      - kong
+      - rabbitmq
 
   ##################################
   #? sell_ticket: The Sell Ticket microservice

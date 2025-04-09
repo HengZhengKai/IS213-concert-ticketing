@@ -7,6 +7,7 @@ import pika
 import json
 from invokes import invoke_http
 import time
+import logging
 
 app = Flask(__name__)
 
@@ -14,6 +15,20 @@ CORS(app)
 
 rabbitmq_host = os.getenv("RABBITMQ_HOST", "rabbitmq")
 credentials = pika.PlainCredentials('guest', 'guest')
+
+# Determine if we're running in Docker or locally
+is_docker = os.getenv("DOCKER_ENV", "false").lower() == "true"
+base_url = "http://kong:8000" if is_docker else "http://localhost:8000"
+
+event_URL = f"{base_url}/event"
+seat_URL = f"{base_url}/seat"
+ticket_URL = f"{base_url}/ticket"
+transaction_URL = f"{base_url}/transaction"
+user_URL = f"{base_url}/user"
+payment_URL = f"{base_url}/payment"
+email_URL = f"{base_url}/email"
+
+logger = logging.getLogger(__name__)
 
 for attempt in range(5):
     try:
@@ -29,14 +44,6 @@ for attempt in range(5):
 else:
     raise Exception("Could not connect to RabbitMQ after multiple attempts.")
     exit(1)
-
-event_URL = "http://kong:8000/event"
-seat_URL = "http://kong:8000/seat"
-ticket_URL = "http://kong:8000"
-transaction_URL = "http://kong:8000/transaction"
-user_URL = "http://kong:8000/user"
-payment_URL = "http://kong:8000/payment"
-email_URL = "http://kong:8000/email"
 
 #app route: http://localhost:5100/buyticket
 @app.route("/buyticket", methods=['POST'])
@@ -93,6 +100,18 @@ def process_buy_ticket(userID, eventName, eventID, eventDateTime, seatNo, seatCa
         print('\n-----Invoking event microservice-----')
         event = invoke_http(f"{event_URL}/{eventID}/{eventDateTime}")
         
+        if not isinstance(event, dict):
+            return {
+                "code": 500,
+                "message": "Invalid response from event microservice."
+            }
+        
+        if event.get("code") not in range(200, 300):
+            return {
+                "code": 500,
+                "message": f"Failed to get event: {event.get('message', 'Unknown error')}"
+            }
+
         if "data" not in event or "availableSeats" not in event["data"]:
             return {
                 "code": 500,
@@ -103,15 +122,33 @@ def process_buy_ticket(userID, eventName, eventID, eventDateTime, seatNo, seatCa
         newSeats = availableSeats - 1
         event_result = invoke_http(f"{event_URL}/{eventID}/{eventDateTime}", method="PUT", json={"availableSeats": newSeats})
 
-        if event_result["code"] not in range(200, 300):
+        if not isinstance(event_result, dict):
             return {
                 "code": 500,
-                "message": "Failed to update event, check event microservice."
+                "message": "Invalid response from event update."
+            }
+
+        if event_result.get("code") not in range(200, 300):
+            return {
+                "code": 500,
+                "message": f"Failed to update event: {event_result.get('message', 'Unknown error')}"
             }
 
         # Step 4-5: Get user name and email from userID
         print('\n-----Invoking user microservice-----')
         user = invoke_http(f"{user_URL}/{userID}")
+        
+        if not isinstance(user, dict):
+            return {
+                "code": 500,
+                "message": "Invalid response from user microservice."
+            }
+
+        if user.get("code") not in range(200, 300):
+            return {
+                "code": 500,
+                "message": f"Failed to get user: {user.get('message', 'Unknown error')}"
+            }
         
         if "data" not in user or "name" not in user["data"] or "email" not in user["data"]:
             return {
@@ -127,6 +164,8 @@ def process_buy_ticket(userID, eventName, eventID, eventDateTime, seatNo, seatCa
         ticketID = None
         for i in range(5):  # max 5 attempts
             temp_ticketID = "T" + str(uuid.uuid4())[:4]
+            logger.info(f"Attempt {i+1}: Creating ticket with ID {temp_ticketID}")
+            
             ticket_data = {
                 "ownerID": userID,
                 "ownerName": userName,
@@ -136,18 +175,35 @@ def process_buy_ticket(userID, eventName, eventID, eventDateTime, seatNo, seatCa
                 "seatNo": seatNo,
                 "seatCategory": seatCategory,
                 "price": price,
-                "resalePrice": None,
+                "resalePrice": None,  # Set to None for new tickets
                 "status": "paid",
                 "paymentID": paymentID,
-                "isCheckedIn": False
+                "isCheckedIn": False  # Set to False for new tickets
             }
+            logger.info(f"Ticket data: {ticket_data}")
 
-            ticket_result = invoke_http(f"{ticket_URL}/{temp_ticketID}", method="POST", json=ticket_data)
-            if ticket_result["code"] == 201:
-                ticketID = temp_ticketID
-                break
+            try:
+                logger.info(f"Making request to ticket service: {ticket_URL}/{temp_ticketID}")
+                ticket_result = invoke_http(f"{ticket_URL}/{temp_ticketID}", method="POST", json=ticket_data)
+                logger.info(f"Ticket service response: {ticket_result}")
+                
+                if not isinstance(ticket_result, dict):
+                    logger.error(f"Invalid response type from ticket service: {type(ticket_result)}")
+                    continue  # Try again with new ticketID
+                
+                if ticket_result.get("code") == 201:
+                    ticketID = temp_ticketID
+                    logger.info(f"Successfully created ticket with ID: {ticketID}")
+                    break
+                else:
+                    logger.error(f"Failed to create ticket: {ticket_result.get('message', 'Unknown error')}")
+                    continue  # Try again with new ticketID
+            except Exception as e:
+                logger.error(f"Exception during ticket creation: {str(e)}")
+                continue  # Try again with new ticketID
 
         if ticketID is None:
+            logger.error("Failed to create ticket after multiple attempts")
             return {
                 "code": 500,
                 "message": "Failed to create ticket after multiple attempts."
@@ -169,7 +225,11 @@ def process_buy_ticket(userID, eventName, eventID, eventDateTime, seatNo, seatCa
             }
 
             transaction_result = invoke_http(f"{transaction_URL}", method="POST", json=transaction_data)
-            transaction_code = transaction_result["code"]
+            
+            if not isinstance(transaction_result, dict):
+                continue  # Try again with new transactionID
+                
+            transaction_code = transaction_result.get("code")
 
         # Step 10: Email buyer asynchronously
         print('\n-----Invoking email service through AMQP-----')
@@ -201,6 +261,7 @@ def process_buy_ticket(userID, eventName, eventID, eventDateTime, seatNo, seatCa
             "message": "Ticket purchase successful."
         }
     except Exception as e:
+        print(f"Error in process_buy_ticket: {str(e)}")
         return {
             "code": 500,
             "message": f"Error processing ticket: {str(e)}"
