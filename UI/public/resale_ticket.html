@@ -17,6 +17,21 @@
   <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
 
   <style>
+    /* Style for v-cloak to prevent flash of uncompiled content */
+    [v-cloak] {
+      display: none;
+    }
+    
+    /* Style for listed tickets */
+    .ticket-listed {
+      opacity: 0.6; /* Example: make it semi-transparent */
+      background-color: #f8f9fa; /* Light grey background */
+    }
+    .listed-message {
+        font-weight: bold;
+        color: #28a745; /* Green color */
+    }
+    
     /* body { padding-top: 80px; } */ /* Let template CSS handle padding */
     .form-section {
       background-color: #fff;
@@ -61,7 +76,7 @@
   </header>
 
   <!-- Main Content Area -->
-  <div id="resaleApp" class="container mt-5 pt-5"> 
+  <div id="resaleApp" v-cloak class="container mt-5 pt-5"> 
     <h2 class="text-center mb-5">Ticket Resale</h2>
 
     <!-- Seller Section -->
@@ -79,8 +94,8 @@
                 <div v-else-if="error" class="alert alert-danger">{{ error }}</div>
 
                 <!-- Display Resellable Tickets -->
-                <div v-else-if="resellableTickets.length > 0">
-                    <div v-for="ticket in resellableTickets" :key="ticket.ticketID" class="card mb-3">
+                <div v-if="tickets.length > 0">
+                    <div v-for="ticket in tickets" :key="ticket.ticketID" class="card mb-3" :class="{ 'ticket-listed': ticket.status === 'available' }">
                         <div class="card-body">
                             <h5 class="card-title">{{ ticket.eventName }}</h5>
                             <p class="card-text">
@@ -89,24 +104,33 @@
                                 <strong>Seat:</strong> {{ ticket.seatNo }} ({{ ticket.seatCategory }})<br>
                                 <strong>Original Price:</strong> ${{ ticket.price?.toFixed(2) || 'N/A' }}
                             </p>
-                            <div class="row g-2 align-items-center">
-                                <div class="col-sm-6">
-                                    <label :for="'resalePrice-' + ticket.ticketID" class="visually-hidden">Resale Price</label>
-                                    <div class="input-group">
-                                         <span class="input-group-text">$</span>
-                                        <input type="number" step="0.01" min="0" class="form-control" 
-                                               :id="'resalePrice-' + ticket.ticketID" 
-                                               placeholder="Enter Resale Price" 
-                                               v-model.number="resalePrices[ticket.ticketID]">
+                            
+                            <!-- Conditional display for input/button vs. listed message -->
+                            <div v-if="ticket.status !== 'available'">
+                                <div class="row g-2 align-items-center">
+                                    <div class="col-sm-6">
+                                        <label :for="'resalePrice-' + ticket.ticketID" class="visually-hidden">Resale Price</label>
+                                        <div class="input-group">
+                                             <span class="input-group-text">$</span>
+                                            <input type="number" step="0.01" min="0" class="form-control" 
+                                                   :id="'resalePrice-' + ticket.ticketID" 
+                                                   placeholder="Enter Resale Price" 
+                                                   v-model.number="resalePrices[ticket.ticketID]">
+                                        </div>
+                                    </div>
+                                    <div class="col-sm-6">
+                                        <button type="button" class="btn btn-danger w-100" @click="listTicketForResale(ticket.ticketID)">
+                                            List for Resale
+                                        </button>
                                     </div>
                                 </div>
-                                <div class="col-sm-6">
-                                    <button type="button" class="btn btn-danger w-100" @click="listTicketForResale(ticket.ticketID)">
-                                        List for Resale
-                                    </button>
-                                </div>
                             </div>
-                             <!-- Message Area for this specific ticket -->
+                            <div v-else class="listed-message text-center mt-3">
+                                ✔️ Listed for Resale
+                            </div>
+                            <!-- End conditional display -->
+                            
+                             <!-- Message Area for this specific ticket (success/error feedback) -->
                             <div v-if="resaleMessages[ticket.ticketID]" class="alert mt-3 mb-0 py-2" 
                                 :class="resaleMessages[ticket.ticketID].type === 'success' ? 'alert-success' : 'alert-danger'" 
                                 role="alert">

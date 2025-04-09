@@ -323,7 +323,19 @@ def update_ticket(ticketID):
             }), 409
 
     # Update the ticket with new values from the request
-    ticket.update(**data)
+    try:
+        logger.info(f"Attempting to update ticket {ticketID} with data: {data}")
+        ticket.update(**data)
+        logger.info(f"Successfully updated ticket {ticketID}")
+    except (db.errors.ValidationError, db.errors.OperationError, Exception) as e:
+        logger.error(f"Error updating ticket {ticketID}: {str(e)}")
+        import traceback
+        logger.error(traceback.format_exc())
+        return jsonify({
+            "code": 500,
+            "data": {"ticketID": ticketID},
+            "message": f"An error occurred updating the ticket: {str(e)}"
+        }), 500
 
     # Return the updated ticket data
     updated_ticket = Ticket.objects(ticketID=ticketID).first()

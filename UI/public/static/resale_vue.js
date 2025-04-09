@@ -40,13 +40,6 @@ const app = Vue.createApp({
         }
         await this.loadUserTickets();
     },
-    computed: {
-        // Filter tickets that can potentially be resold 
-        // (Adjust logic based on your status field and rules)
-        resellableTickets() {
-            return this.tickets.filter(t => !t.isCheckedIn && t.status !== 'resale'); // Example filter
-        }
-    },
     methods: {
         // Method to fetch user's tickets (similar to check_in_vue.js)
         async loadUserTickets() {
