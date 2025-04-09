@@ -7,13 +7,28 @@ import pika
 import json
 from invokes import invoke_http
 import time
+import logging
+from requests.exceptions import ConnectionError, RequestException
 
 app = Flask(__name__)
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+app.debug = True
 
 CORS(app)
 
 rabbitmq_host = os.getenv("RABBITMQ_HOST", "rabbitmq")
 credentials = pika.PlainCredentials('guest', 'guest')
+
+# Determine if we're running in Docker or locally
+is_docker = os.getenv("DOCKER_ENV", "false").lower() == "true"
+base_url = "http://kong:8000" if is_docker else "http://localhost:8000"
+
+waitlist_URL = f"{base_url}/waitlist"
+ticket_URL = f"{base_url}/ticket"
+transaction_URL = f"{base_url}/transaction"
+user_URL = f"{base_url}/user"
+payment_URL = f"{base_url}"
 
 for attempt in range(5):
     try:
@@ -30,12 +45,21 @@ else:
     raise Exception("Could not connect to RabbitMQ after multiple attempts.")
     exit(1)
 
-
-waitlist_URL = "http://localhost:5003/waitlist"
-ticket_URL = "http://localhost:5004/ticket"
-transaction_URL = "http://localhost:5005/transaction"
-user_URL = "http://localhost:5006/user"
-payment_URL = "http://localhost:5007/payment"
+def make_request_with_retry(url, method='GET', json=None, max_retries=3, retry_delay=1):
+    for attempt in range(max_retries):
+        try:
+            response = requests.request(method, url, json=json, timeout=10)
+            return response.json()
+        except ConnectionError as e:
+            if attempt == max_retries - 1:
+                raise
+            print(f"Connection error (attempt {attempt + 1}/{max_retries}): {str(e)}")
+            time.sleep(retry_delay)
+        except RequestException as e:
+            if attempt == max_retries - 1:
+                raise
+            print(f"Request error (attempt {attempt + 1}/{max_retries}): {str(e)}")
+            time.sleep(retry_delay)
 
 @app.route("/buyresaleticket/<string:ticketID>", methods=['POST'])
 def buy_resale_ticket(ticketID):
@@ -80,7 +104,6 @@ def buy_resale_ticket(ticketID):
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             ex_str = f"{str(e)} at {str(exc_type)}: {fname}: line {str(exc_tb.tb_lineno)}"
-            print(ex_str)
 
             return jsonify({
                 "code": 500,
@@ -95,45 +118,95 @@ def buy_resale_ticket(ticketID):
 
 def process_buy_resale_ticket(userID, ticketID, paymentID):
     try:
-        # Step 2-3: Get user name and email from userID
-        print('\n-----Invoking user microservice-----')
-        user = invoke_http(f"{user_URL}/{userID}")
-        if user["code"] != 200:
-            return {"code": user["code"], "message": "User not found."}
+        print(f"\n=== Starting process_buy_resale_ticket ===")
+        print(f"Parameters: userID={userID}, ticketID={ticketID}, paymentID={paymentID}")
         
+        # Step 2-3: Get user name and email from userID
+        print(f'\n-----Invoking user microservice for user {userID}-----')
+        try:
+            user = invoke_http(f"{user_URL}/{userID}")
+        except Exception as e:
+            return {"code": 500, "message": f"DEBUGGING: Error calling user service: {str(e)}"}
+            
         userName = user["data"]["name"]
         userEmail = user["data"]["email"]
+        print(f"Retrieved user details: name={userName}, email={userEmail}")
         
         # Step 4-5: Get ticket details
-        print('\n-----Invoking ticket microservice-----')
-        ticket = invoke_http(f"{ticket_URL}/ticket/{ticketID}")
-        if ticket["code"] != 200:
-            return {"code": ticket["code"], "message": "Ticket not found."}
+        print(f'\n-----Invoking ticket microservice for ticket {ticketID}-----')
+        ticket_url = f"{ticket_URL}/{ticketID}"
+        print(f"Calling ticket URL: {ticket_url}")
+        try:
+            ticket = invoke_http(ticket_url)
+                
+            # Check if ticket is already paid
+            if ticket["data"].get("status") == "paid":
+                return {
+                    "code": 409,
+                    "message": "Ticket is already paid and cannot be updated."
+                }
+        except Exception as e:
+            return {"code": 500, "message": f"DEBUGGING: Error calling ticket service: {str(e)}"}
         
-        sellerID = ticket["data"]["ownerId"]
-        sellerName = ticket["data"]["ownerName"]
-        eventID = ticket["data"]["eventID"]
-        eventName = ticket["data"]["eventName"]
-        eventDateTime = ticket["data"]["eventDateTime"]
-        seatNo = ticket["data"]["seatNo"]
-        seatCategory = ticket["data"]["seatCategory"]
-        price = ticket["data"]["price"]
-        resalePrice = ticket["data"]["resalePrice"]
-        original_paymentID = ticket["data"]["paymentID"]
+        try:
+            sellerID = ticket["data"]["ownerID"]
+            sellerName = ticket["data"]["ownerName"]
+            eventID = ticket["data"]["eventID"]
+            eventName = ticket["data"]["eventName"]
+            eventDateTime = ticket["data"]["eventDateTime"]
+            seatNo = ticket["data"]["seatNo"]
+            seatCategory = ticket["data"]["seatCategory"]
+            price = ticket["data"]["price"]
+            resalePrice = ticket["data"]["resalePrice"]
+            original_paymentID = ticket["data"]["paymentID"]
+            print(f"Ticket details: sellerID={sellerID}, eventID={eventID}, resalePrice={resalePrice}")
+        except KeyError as e:
+            print(f"Failed to extract ticket details. Missing key: {e}")
+            print(f"Full ticket response: {ticket}")
+            return {"code": 500, "message": f"DEBUGGING: Invalid ticket data structure: missing {e}"}
         
         # Step 6-7. Update ticket for user
-        ticket_result = invoke_http(f"{ticket_URL}/{ticketID}", method='PUT', json={"status": "paid",
-                                                                                    "ownerID": userID,
-                                                                                    "ownerName": userName,
-                                                                                    "paymentID": paymentID})
-        if ticket_result["code"] != 200:
-            return {"code": ticket_result["code"], "message": "Failed to update ticket."}
+        print(f'\n-----Updating ticket {ticketID} for user {userID}-----')
+        
+        # Check ticket conditions before update
+        if ticket['data']['isCheckedIn']:
+            return {
+                "code": 409,
+                "message": "DEBUGGING: Ticket is already checked in and cannot be modified."
+            }
+            
+        if ticket['data']['status'] != 'available':
+            return {
+                "code": 409,
+                "message": f"DEBUGGING: Ticket cannot be updated. Current status: {ticket['data']['status']}"
+            }
+            
+        update_data = {
+            "status": "paid",
+            "ownerID": userID,
+            "ownerName": userName,
+            "paymentID": paymentID,
+            "isCheckedIn": False
+        }
+        print(f"Update data being sent: {json.dumps(update_data, indent=2)}")
+        ticket_result = invoke_http(f"{ticket_URL}/{ticketID}", method='PUT', json=update_data)
+        print(f"Raw ticket update response: {json.dumps(ticket_result, indent=2)}")
+        
+        if not isinstance(ticket_result, dict):
+            return {
+                "code": 500,
+                "message": f"DEBUGGING: Invalid response type from ticket update: {type(ticket_result)}"
+            }
+            
+        if ticket_result.get("code") != 200:
+            return {
+                "code": ticket_result.get("code", 500),
+                "message": f"DEBUGGING: Unexpected response code: {ticket_result.get('code')}"
+            }
 
         # Step 8-9: Invoke payment service to refund charge
-        print('\n-----Invoking payment microservice-----')
-        refund_result = invoke_http(f"{payment_URL}/makerefund", method='POST', json={"payment_id": original_paymentID})
-        if refund_result["code"] != 200:
-            return {"code": refund_result["code"], "message": "Refund failed."}
+        print(f'\n-----Invoking payment microservice for refund {original_paymentID}-----')
+        refund_result = invoke_http(f"{payment_URL}/makerefund", method='POST', json={"payment_intent": original_paymentID})
 
         # Step 10-11: Log purchase and refund transactions
         transaction_code = None
@@ -203,14 +276,19 @@ def process_buy_resale_ticket(userID, ticketID, paymentID):
 
     except Exception as e:
         # Catch any unhandled exceptions
-        exc_type, exc_obj, exc_tb = sys.exc_info()
-        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-        ex_str = f"{str(e)} at {str(exc_type)}: {fname}: line {str(exc_tb.tb_lineno)}"
-        print(ex_str)
-
         return {
             "code": 500,
-            "message": "Internal error occurred during ticket purchase. Please try again later."
+            "message": f"Internal error occurred during ticket purchase: {str(e)}"
         }
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5101, debug=True)
+    # Set up logging
+    logging.basicConfig(
+        level=logging.DEBUG,
+        format='%(asctime)s %(levelname)s: %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    app.logger.setLevel(logging.DEBUG)
+    
+    # Enable debug mode
+    app.debug = True
+    app.run(host="0.0.0.0", port=5102, debug=True)

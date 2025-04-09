@@ -184,10 +184,7 @@ def process_sell_ticket(ticket):
             }
         }
 
-        print(f"Attempting POST to Celery at: {celery_URL}", flush=True)
         celery_result = invoke_http(celery_URL, method='POST', json=payload)
-        print(f"Celery response: {celery_result}", flush=True)
-        # Note: We typically don't wait for or check celery_result in fire-and-forget
 
         # Step 9: Return Ticket up for Resale
         return {

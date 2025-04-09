@@ -137,6 +137,9 @@ services:
     - RABBITMQ_HOST=rabbitmq
     - USER_SERVICE_URL=http://user-service:5006
 
+  ##################################
+  #? celery_email_service: The Celery Email microservice
+  ##################################
 
   celery-email-service:
     build: ./atomic-microservices/celery_email/
@@ -196,12 +199,17 @@ services:
       - email-service
       - celery-email-service                            
 
+  ##################################
+  #? buy_resale_ticket: The Buy Resale Ticket microservice
+  ##################################
+
   buy-resale-ticket-service:
     build: ./composite-microservices/buy_resale_ticket/
     container_name: buy-resale-ticket-service
     ports:
       - "5102:5102"
     environment:
+      DOCKER_ENV: "true"
       RABBITMQ_HOST: rabbitmq
       ticket_service_URL: http://ticket-service:5004
       transaction_service_URL: http://transaction-service:5005
@@ -214,6 +222,10 @@ services:
       - user-service
       - payment-service
       - email-service       
+
+  ##################################
+  #? check_in_ticket: The Check In Ticket microservice
+  ##################################
 
   check-in-ticket-service:
     build: ./composite-microservices/check_in_ticket/
