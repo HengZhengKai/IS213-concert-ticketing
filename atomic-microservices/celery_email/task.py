@@ -55,10 +55,17 @@ def send_waitlist_messages():
     waitlist_users = request.json["waitlist_users"]
     ticket = request.json["ticket"]
     
+    if waitlist_users == []:
+        return jsonify({
+            "code": 200,
+            "message": "No messages to be sent"}),200
+
     for user in waitlist_users:
         send_message.delay(user["userID"], ticket)  # Send task to Celery workers
     
-    return jsonify({"message": "Messages are being sent"}), 200
+    return jsonify({
+        "code": 200,
+        "message": "Messages are being sent"}),200
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5009, debug=True)

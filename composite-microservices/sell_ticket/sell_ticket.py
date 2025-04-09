@@ -12,9 +12,7 @@ CORS(app)
 
 waitlist_URL = "http://kong:8000/waitlist"
 ticket_URL = "http://kong:8000"
-user_URL = "http://localhost:5006/user"
-email_URL = "http://localhost:5008/email"
-celery_URL = "http://localhost:5009/send_waitlist_emails"
+celery_URL = "http://kong:8000/send_waitlist_emails"
 
 @app.route("/sellticket/<string:ticketID>", methods=['POST']) # json body: resalePrice
 def sell_ticket(ticketID):
@@ -114,7 +112,7 @@ def process_sell_ticket(ticket):
                 "message": "Ticket up for resale. No users on waitlist at the moment."
             }
 
-        # Step 8: Email all waitlist users
+        # Step 8: Email all waitlist users through fire and forget
         payload = {
             "waitlist_users": waitlist_users["data"]["waitlist"],
             "ticket": {
@@ -125,12 +123,6 @@ def process_sell_ticket(ticket):
         }
 
         celery_result = invoke_http(f"{celery_URL}", method='POST', json=payload)
-
-        if celery_result["code"] not in range(200, 300):
-            return {
-                "code": 500,
-                "message": f"Celery task failure, status code: {celery_result['code']}",
-            }
 
         # Step 9: Return Ticket up for Resale
         return {
