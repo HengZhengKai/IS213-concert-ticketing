@@ -31,17 +31,18 @@ app = Flask(__name__)
 # --- JWT Secret Key --- 
 app.config['SECRET_KEY'] = os.getenv("JWT_SECRET_KEY", "your_default_super_secret_key")
 
-# # Allow requests from Python HTTP server
-# cors_origins = ["http://localhost", "http://localhost:8000", "http://localhost:8080"]
+# --- Configure CORS --- 
+# Allow requests from WAMP, Python HTTP server, and potentially other local ports
+# cors_origins = ["http://localhost", "http://localhost:8000", "http://localhost:8080", "http://127.0.0.1:8000", "http://127.0.0.1:8080"]
 # CORS(app, 
-#         resources={r"/*": {"origins": cors_origins}}, 
-#         methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"], # Allow common methods
-#         allow_headers=["Authorization", "Content-Type", "Accept"], # Allow necessary headers
-#         supports_credentials=True # If you need cookies/session later
+#     resources={r"/*": {"origins": cors_origins}}, 
+#     methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+#     allow_headers=["Authorization", "Content-Type", "Accept", "Origin"],
+#     supports_credentials=True,
+#     expose_headers=["Content-Type", "Authorization"]
 # )
-# # --- End CORS Configuration ---
-
-CORS(app)
+CORS(app) # Temporarily simplify to allow all origins/methods/headers for testing
+# --- End CORS Configuration ---
 
 # --- Event Service URL --- 
 EVENT_SERVICE_URL = os.getenv("EVENT_SERVICE_URL", "http://event_service:5001")
