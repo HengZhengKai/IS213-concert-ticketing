@@ -89,7 +89,7 @@
     <script src="static/login.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async function() {
-            const urlParams = new URLSearchParams(window.location.search);  // ✅ Define this!
+            const urlParams = new URLSearchParams(window.location.search);  
         
             const ticketID = urlParams.get('ticketID');
             const userID = urlParams.get('userID');
@@ -101,7 +101,7 @@
             }
         
             try {
-                const verifyRes = await fetch(`http://localhost:8000/verify-payment?session_id=${sessionId}`);
+                const verifyRes = await fetch(`http://localhost:5007/verify-payment?session_id=${sessionId}`);
                 const verifyData = await verifyRes.json();
         
                 if (!verifyRes.ok || !verifyData.payment_intent_id) {
@@ -122,9 +122,7 @@
                     })
                 });
         
-               
                 const data = await response.json();
-        
                 if (response.ok) {
                     showSuccess();
                 } else {
