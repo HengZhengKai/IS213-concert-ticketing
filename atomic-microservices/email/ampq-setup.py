@@ -1,7 +1,3 @@
-"""
-A standalone script to create exchanges and queues on RabbitMQ for the Ticketing system.
-"""
-
 import pika
 
 amqp_host = "localhost"
@@ -70,20 +66,6 @@ create_queue(
     exchange_name=exchange_name,
     queue_name="email.ticket.resale",
     routing_keys=["ticket.resold"]
-)
-
-create_queue(
-    channel=channel,
-    exchange_name=exchange_name,
-    queue_name="email.ticket.checkin",
-    routing_keys=["ticket.checkedin"]
-)
-
-create_queue(
-    channel=channel,
-    exchange_name=exchange_name,
-    queue_name="email.payment.confirmation",
-    routing_keys=["payment.successful"]
 )
 
 create_queue(
