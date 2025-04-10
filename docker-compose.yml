@@ -233,6 +233,9 @@ services:
     ports:
       - "5103:5103"
     environment:
+      # Pass the HOST_IP from the environment where docker-compose is run
+      # Fallback to localhost if HOST_IP is not set
+      HOST_IP: ${HOST_IP:-127.0.0.1}
       ticket_service_URL: http://ticket-service:5004
     depends_on:
       - ticket-service

@@ -14,7 +14,9 @@ const app = Vue.createApp({
             selectedTicketId: null,
             qrCodeDataUrl: null,
             qrStatusMessage: 'Initializing...',
-            isCheckingScan: false // To manage polling state later
+            isCheckingScan: false, // Potentially redundant now, but can keep
+            pollingIntervalId: null, // To store the polling timer
+            qrModalInstance: null // To store modal instance
         };
     },
     async mounted() {
@@ -34,6 +36,9 @@ const app = Vue.createApp({
             window.location.href = 'login.html';
             return;
         }
+
+        // Setup Modal Listener when component mounts
+        this.setupModalListener();
 
         // 2. Load Tickets
         await this.loadUserTickets();
@@ -114,61 +119,126 @@ const app = Vue.createApp({
             if (!imagePath) return placeholderImage;
             return imagePath;
         },
-        // --- Method to handle Check In button click ---
+        setupModalListener() {
+            const qrModalElement = document.getElementById('qrModal');
+            if (qrModalElement) {
+                // Listen for the modal being hidden
+                qrModalElement.addEventListener('hidden.bs.modal', () => {
+                    console.log('[Vue App] QR Modal hidden. Stopping polling.');
+                    this.stopPollingStatus();
+                    // Clean up QR code URL to free memory
+                    if (this.qrCodeDataUrl) {
+                        URL.revokeObjectURL(this.qrCodeDataUrl);
+                        this.qrCodeDataUrl = null;
+                    }
+                });
+            } else {
+                console.error('[Vue App] Could not find qrModal element to attach hide listener.');
+            }
+        },
         async initiateCheckIn(ticketId) {
             console.log(`[Vue App] Initiating check-in for ticket ID: ${ticketId}`);
             this.selectedTicketId = ticketId;
-            this.qrCodeDataUrl = null; // Clear previous QR code
+            this.qrCodeDataUrl = null; 
             this.qrStatusMessage = 'Generating QR Code...';
-            this.isCheckingScan = false; // Reset scan checking flag
+            this.stopPollingStatus(); // Stop any previous polling
             
-            // Get modal instance
             const qrModalElement = document.getElementById('qrModal');
             if (!qrModalElement) {
                 console.error("[Vue App] QR Modal element not found!");
-                this.error = "UI Error: Check-in modal is missing."; // Show error in main UI
+                this.error = "UI Error: Check-in modal is missing.";
                 return;
             }
-            const qrModal = bootstrap.Modal.getInstance(qrModalElement) || new bootstrap.Modal(qrModalElement);
+            // Store the instance if not already stored or get existing one
+            this.qrModalInstance = bootstrap.Modal.getInstance(qrModalElement) || new bootstrap.Modal(qrModalElement);
 
-            qrModal.show(); // Show modal immediately with loading state
+            this.qrModalInstance.show(); // Show modal
         
             try {
-                // 3. Call generateQR endpoint (POST)
+                // 3. Call generateQR endpoint (GET)
                 const response = await fetch(`${checkInServiceBaseUrl}/generateqr/${this.selectedTicketId}`, {
-                    method: 'POST'
+                    method: 'GET' 
                 });
         
                 if (!response.ok) {
                     let errorMsg = `HTTP ${response.status}: ${response.statusText}`;
                     try {
-                        const errorData = await response.json();
-                        errorMsg = errorData.message || JSON.stringify(errorData);
+                        const errorText = await response.text(); 
+                        errorMsg = errorText;
                     } catch (e) {
-                        console.warn("Could not parse error response as JSON.");
+                        console.warn("Could not read/parse error response body.");
                     }
                     throw new Error(errorMsg);
                 }
         
-                // Handle the response as a binary blob
-                const blob = await response.blob(); // Get the response as a Blob (image data)
-        
-                // Create a URL for the Blob to use as an image source
-                this.qrCodeDataUrl = URL.createObjectURL(blob);  // Update Vue data property for image source
-        
-                console.log("[Vue App] QR Code image received and displayed.");
+                const blob = await response.blob();
+                this.qrCodeDataUrl = URL.createObjectURL(blob);
+                this.qrStatusMessage = 'Scan the QR code below.';
+                console.log("[Vue App] QR Code image received. Starting polling...");
+                
+                // Start polling for status updates
+                this.startPollingStatus(); 
         
             } catch (error) {
                 console.error('[Vue App] Error generating QR code:', error);
                 this.qrStatusMessage = `Error: ${error.message}`;
-                this.qrCodeDataUrl = null; // Clear QR code on error
+                this.qrCodeDataUrl = null;
+            }
+        },
+        startPollingStatus() {
+            this.stopPollingStatus(); // Ensure no duplicate intervals
+            console.log(`[Vue App] Starting status polling for ${this.selectedTicketId}`);
+            this.isCheckingScan = true; // Indicate polling is active
+            // Poll every 2 seconds (adjust as needed)
+            this.pollingIntervalId = setInterval(this.checkScanStatus, 2000);
+            // Optionally run immediate check
+            // this.checkScanStatus(); 
+        },
+        stopPollingStatus() {
+            if (this.pollingIntervalId) {
+                console.log(`[Vue App] Stopping status polling for ${this.selectedTicketId}`);
+                clearInterval(this.pollingIntervalId);
+                this.pollingIntervalId = null;
+                this.isCheckingScan = false; // Indicate polling stopped
+            }
+        },
+        async checkScanStatus() {
+            if (!this.selectedTicketId) {
+                console.warn('[Vue App] checkScanStatus called without selectedTicketId');
+                this.stopPollingStatus();
+                return;
+            }
+            console.log(`[Vue App] Polling status for ${this.selectedTicketId}...`);
+            try {
+                const response = await fetch(`${checkInServiceBaseUrl}/checkstatus/${this.selectedTicketId}`, {
+                    method: 'GET'
+                });
+                if (!response.ok) {
+                    console.error(`[Vue App] Polling error: HTTP ${response.status}`);
+                    return; 
+                }
+                const data = await response.json();
+                console.log(`[Vue App] Poll status received: ${data.status}`);
+
+                if (data.status === 'checked_in') {
+                    console.log(`[Vue App] Ticket ${this.selectedTicketId} confirmed checked in! Redirecting...`);
+                    this.stopPollingStatus();
+                    if (this.qrModalInstance) {
+                         this.qrModalInstance.hide(); // Hide modal before redirect
+                    }
+                    
+                    // Redirect the main window to the success page
+                    window.location.href = `${checkInServiceBaseUrl}/success`; 
+                    
+                    // No need to reload tickets here as we are navigating away
+                    // await this.loadUserTickets(); 
+                }
+                // If status is 'not_yet', do nothing
+
+            } catch (error) {
+                console.error('[Vue App] Error during status polling fetch:', error);
             }
         }
-        // --- End of initiateCheckIn method ---
-        
-        // Method for polling will be added later
-        // startCheckingScan() { ... }
-        // stopCheckingScan() { ... }
     }
 });
 

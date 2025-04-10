@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scan QR Code to Check In</title>
+    <style>
+        body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; margin: 0; background-color: #f4f4f4; }
+        .container { text-align: center; padding: 20px; background-color: #fff; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        h1 { color: #333; }
+        p { color: #666; }
+        img { border: 1px solid #ddd; margin-top: 20px; max-width: 90%; height: auto; }
+        #status { margin-top: 15px; font-weight: bold; }
+        .checking { color: orange; }
+        .error { color: red; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Ticket Check-In</h1>
+        <p>Scan the QR code below with your device to check in ticket: <strong>{{ ticketID }}</strong></p>
+        <!-- The image source points to the route that generates the QR -->
+        <img src="/generateqr/{{ ticketID }}" alt="Check-in QR Code for ticket {{ ticketID }}">
+        <p id="status" class="checking">Status: Waiting for scan...</p>
+    </div>
+
+    <script>
+        const ticketID = "{{ ticketID }}"; // Get ticketID from Flask template
+        const statusElement = document.getElementById('status');
+        let intervalId = null; // To store the interval ID
+
+        function checkStatus() {
+            // Use fetch to call the /checkstatus endpoint
+            fetch(`/checkstatus/${ticketID}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log("Poll status:", data.status); // Log status
+                    if (data.status === 'checked_in') {
+                        statusElement.textContent = 'Status: Checked In!';
+                        statusElement.className = 'success'; // Optional: add success class
+                        clearInterval(intervalId); // Stop polling
+                        // Redirect to a success page
+                        window.location.href = "/success";
+                    } else {
+                        // Keep showing waiting status, could add more detail if needed
+                        statusElement.textContent = 'Status: Waiting for scan...';
+                        statusElement.className = 'checking';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error fetching status:', error);
+                    statusElement.textContent = 'Error checking status. Please refresh.';
+                    statusElement.className = 'error';
+                    // Consider stopping polling on persistent errors
+                    // clearInterval(intervalId);
+                });
+        }
+
+        // Start polling every 2 seconds (adjust interval as needed)
+        intervalId = setInterval(checkStatus, 2000);
+
+        // Optional: Perform an initial check immediately on load
+        // checkStatus();
+    </script>
+</body>
+</html> 
