@@ -46,8 +46,7 @@ def sell_ticket(ticketID):
 
 def process_sell_ticket(ticket):
     try:
-        # === Step 1: Query current ticket status via REST ===
-        print('\n----- Checking current ticket status via REST -----', flush=True)
+        # === Step 1: Get current ticket status ===
         ticket_details_url = f"{ticket_URL}/{ticket['ticketID']}"
         ticket_details_result = invoke_http(ticket_details_url, method='GET')
         
@@ -61,14 +60,12 @@ def process_sell_ticket(ticket):
 
         # === Step 1b: Check if already for resale ===
         if current_status == 'available':
-             print(f"Ticket {ticket['ticketID']} is already listed for resale (status: {current_status}). Aborting PUT, returning 409 Conflict.", flush=True)
              return {
                  "code": 409,
                  "message": "Ticket is already listed for resale."
              }
         
         # === Step 2-3: Update ticket resalePrice and status ===
-        print('\n-----Invoking ticket microservice to update status to available-----', flush=True)
         json_body={"resalePrice": ticket["resalePrice"], "status": "available"}
         update_url = f"{ticket_URL}/{ticket['ticketID']}"
         ticket_result = invoke_http(update_url, method='PUT', json=json_body)
@@ -88,7 +85,7 @@ def process_sell_ticket(ticket):
                     "ticket_message": ticket_result.get("message", "Unknown error from ticket service")
                 }
 
-        # Step 4-5. Query eventID and eventDateTime
+        # Step 4-5. Query eventID and eventDateTime with GraphQL
         print('\n-----Querying ticket microservice-----', flush=True)
         query = """
         query($ticketID: String!) {
@@ -134,7 +131,6 @@ def process_sell_ticket(ticket):
                     "message": "Ticket listed, but failed to retrieve waitlist. Cannot notify users."}
 
         if not waitlist_data: # Empty list is okay
-            print("No users on waitlist.", flush=True)
             return{'code': 201,
                     "data": {
                     "ticketID": ticket["ticketID"],
@@ -162,7 +158,8 @@ def process_sell_ticket(ticket):
                 "ticketID": ticket["ticketID"],
                 "resalePrice": ticket["resalePrice"]
             },
-            "message": "Ticket up for resale. Users on waitlist have been notified."
+            "message": "Ticket up for resale. Users on waitlist have been notified.",
+            "payload": payload
         }
 
     except Exception as e:

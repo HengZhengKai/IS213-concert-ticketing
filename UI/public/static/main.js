@@ -75,7 +75,7 @@ document.addEventListener("DOMContentLoaded", () => {
             headers: {
               "Content-Type": "application/json"
             },
-            body: JSON.stringify({ userID: user.email })
+            body: JSON.stringify({ userID: user.userID })
           });
       
           const result = await response.json();
