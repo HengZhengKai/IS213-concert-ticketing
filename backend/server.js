@@ -8,10 +8,10 @@ const PORT = 5000;
 
 // Middleware
 const corsOptions = {
-  origin: ['http://localhost', 'http://127.0.0.1', 'http://localhost:5500'],
+  origin: ['http://localhost', 'http://127.0.0.1', 'http://localhost:5500', 'http://localhost:8080'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'authorization']
 };
 
 app.use(cors(corsOptions));

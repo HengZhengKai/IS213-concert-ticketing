@@ -61,6 +61,7 @@ services:
         paths:
           - /start-checkout
           - /makerefund
+          - /verify-payment
         strip_path: false
 
   - name: email_service
