@@ -83,6 +83,15 @@ const app = Vue.createApp({
           this.showError = false;
         }
       }
+      // Log the selected seat details
+      console.log("Selected Seat:", {
+        eventID: this.getQueryParams().eventID,
+        eventDateTime: this.getQueryParams().eventDateTime,
+        eventName: this.eventName, 
+        seatNo: seat.seatNo,
+        category: seat.category,
+        price: seat.price
+      });
     },
     addAttendeeForm() {
       if (this.attendeeForms.length < this.selectedSeats.length) {
@@ -176,7 +185,18 @@ const app = Vue.createApp({
     
       this.selectionError = '';
       this.showError = false;
-    
+      
+      // Store the selected seats in sessionStorage before proceeding to payment
+      const selectedSeatsData = this.selectedSeats.map(seat => ({
+        eventID: this.getQueryParams().eventID,
+        eventDateTime: this.getQueryParams().eventDateTime,
+        eventName: this.eventName,
+        seatNo: seat.seatNo,
+        category: seat.category,
+        price: seat.price
+      }));
+      sessionStorage.setItem('selectedSeats', JSON.stringify(selectedSeatsData));
+
       try {
         const { eventID, eventDateTime } = this.getQueryParams();
         const encodedDateTime = encodeURIComponent(eventDateTime);
