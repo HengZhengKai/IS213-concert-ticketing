@@ -76,6 +76,11 @@ The Kubernetes configurations include:
 
 Note: The Kubernetes setup requires additional configuration of your cluster and may need adjustments based on your specific infrastructure requirements.
 
+## Credentials
+When trying out the checkout page, use the following credentials:
+- Credit Card: 4242 4242 4242 4242
+- Name, CVC and Expiry Date can be any value
+
 ## Environment Variables
 
 The system requires a `.env` file in the root directory containing all necessary environment variables. This file has been provided separately for security reasons. Make sure to:
