@@ -81,9 +81,6 @@ RABBITMQ_PORT = int(os.getenv('RABBITMQ_PORT'))
 RABBITMQ_USER = os.getenv('RABBITMQ_USER')
 RABBITMQ_PASS = os.getenv('RABBITMQ_PASS')
 
-# User Service configuration
-USER_SERVICE_URL = os.getenv('USER_SERVICE_URL', 'http://user-service:5006')
-
 # Global variables
 rabbitmq_connection = None
 rabbitmq_channel = None
@@ -102,7 +99,7 @@ def get_user_email(user_id):
         str or None: User email if found, None otherwise
     """
     try:
-        url = f"{USER_SERVICE_URL}/user/{user_id}"
+        url = f"http://kong:8000/user/{user_id}"
         logger.info(f"Fetching user email for ID: {user_id} from URL: {url}")
         
         response = requests.get(url, timeout=5)
