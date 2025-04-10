@@ -20,7 +20,7 @@ const myTicketsApp = Vue.createApp({
       
         const sessionId = new URLSearchParams(window.location.search).get("session_id");
         if (sessionId) {
-          fetch(`http://localhost:5007/verify-payment?session_id=${sessionId}`)
+          fetch(`http://localhost:8000/verify-payment?session_id=${sessionId}`)
             .then(res => res.json())
             .then(data => {
               if (data.payment_intent_id) {
@@ -44,8 +44,8 @@ const myTicketsApp = Vue.createApp({
       async fetchTickets(ownerID, waitlistUserID) {
         try {
           const [ticketRes, waitlistRes] = await Promise.all([
-            fetch(`http://localhost:5004/tickets/${ownerID}`),
-            fetch(`http://localhost:5003/waitlist/user/${waitlistUserID}`)
+            fetch(`http://localhost:8000/tickets/${ownerID}`),
+            fetch(`http://localhost:8000/waitlist/user/${waitlistUserID}`)
           ]);
       
           const ticketData = await ticketRes.json();
