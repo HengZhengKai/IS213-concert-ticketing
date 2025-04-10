@@ -109,23 +109,16 @@ def make_refund():
 @app.route('/verify-payment')
 def verify_payment():
     session_id = request.args.get("session_id")
-    stripe.api_key = os.getenv("STRIPE_SECRET_KEY")  # Your actual Stripe secret key
+    stripe.api_key = os.getenv("STRIPE_SECRET_KEY")  
 
     try:
-        # 1. Get session
         session = stripe.checkout.Session.retrieve(session_id)
 
-        # 2. Get payment intent
         payment_intent_id = session.payment_intent
         payment_intent = stripe.PaymentIntent.retrieve(payment_intent_id)
 
-        # 3. Return everything needed
         return jsonify({
-            # "status": session.payment_status,
-            # "email": session.customer_email,
             # "amount_total": session.amount_total,
-            # "currency": payment_intent.currency,
-            # "payment_method": payment_intent.payment_method,
              "payment_intent_id": payment_intent_id
         }), 200
 
@@ -135,114 +128,3 @@ def verify_payment():
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5007, debug=True)
-# newpayment = "https://personal-5nnqipga.outsystemscloud.com/Stripe/rest/payments/newpayment"
-
-# headers = {
-#     "Content-Type": "application/json",
-#     "Authorization": "Bearer sk_test_51R3vExQSvUjndICG0rAbAi8GNiUDAtQZhgOCHY1uSfnmPjSaZbhb51aCYhglY671WKvvb4H7RWEKklheuX0WCA0I00hTQYEDxm",  # testing key
-# }
-
-# data = {
-#   "amount": 2000, #change to variable
-#   "currency": "sgd", #change to variable
-#   "payment_method": "pm_card_visa", #change to variable
-#   "customer":"cus_S1J0TldFSJlleW", #change to variable
-#   "confirm": True,
-#   "off_session": True,
-#   "automatic_payment_methods": {
-#     "enabled": True,
-#     "allow_redirects": "never"
-#   }
-# }
-
-# response = requests.post(newpayment, json=data, headers=headers)
-# print(response.status_code)
-# print(response.json())
-
-
-# username = os.getenv("MONGO_USERNAME")
-# password = urllib.parse.quote_plus(os.getenv("MONGO_PASSWORD"))
-# cluster = os.getenv("MONGO_CLUSTER")
-# database = os.getenv("MONGO_DATABASE")
-
-# # Construct connection string
-# MONGO_URI = f"mongodb+srv://{username}:{password}@{cluster}/{database}?retryWrites=true&w=majority&authSource=admin"
-
-# try:
-#     # Connect to MongoDB Atlas
-#     logger.info(f"Connecting to MongoDB at: {cluster}")
-#     db.connect(host=MONGO_URI, alias='default')
-#     logger.info("Connected to MongoDB successfully")
-# except Exception as e:
-#     logger.error(f"Failed to connect to MongoDB: {e}")
-
-# class Payment(db.Document): # tell flask what are the fields in your database
-#     eventID = db.StringField(primary_key = True)
-#     eventName = db.StringField(required=True)
-#     imageBase64 = db.StringField()
-#     venue = db.StringField(required=True)
-#     description = db.StringField()
-#     totalSeats = db.IntField(required=True)
-
-#     meta = {'collection': 'Event',
-#             'indexes': [
-#             {'fields': ['eventID'], 'unique': True}
-#         ]
-#     } 
-
-#     def to_json(self):
-#         return {
-#             "eventID": self.eventID,
-#             "eventName": self.eventName,
-#             "imageBase64": self.imageBase64,
-#             "venue": self.venue,
-#             "description": self.description,
-#             "totalSeats": self.totalSeats,
-#         }
-
-# @app.route('/makepayment', methods=['POST'])
-# def make_payment():
-#     try:
-#         # Extracting data from request body
-#         req_data = request.get_json()
-#         stripe_key = os.getenv("STRIPE_SECRET_KEY")
-
-
-#         amount = req_data.get('amount')
-#         currency = req_data.get('currency', 'sgd')  # default to SGD
-#         payment_method = req_data.get('payment_method')
-#         customer = req_data.get('customer')
-
-#         # Check required fields
-#         if not all([amount, currency, payment_method, customer]):
-#             return jsonify({"error": "Missing required payment fields"}), 400
-
-#         newpayment_url = "https://personal-5nnqipga.outsystemscloud.com/Stripe/rest/payments/newpayment"
-
-#         headers = {
-#             "Content-Type": "application/json",
-#             "Authorization": f"Bearer {stripe_key}"}
-
-#         payload = {
-#             "amount": amount,
-#             "currency": currency,
-#             "payment_method": payment_method,
-#             "customer": customer,
-#             "confirm": True,
-#             "off_session": True,
-#             "automatic_payment_methods": {
-#                 "enabled": True,
-#                 "allow_redirects": "never"
-#             }
-#         }
-
-#         response = requests.post(newpayment_url, json=payload, headers=headers)
-
-#         if response.status_code == 200:
-#             return jsonify({"success": True, "data": response.json()})
-#         else:
-#             return jsonify({"error": "Payment failed", "details": response.text}), response.status_code
-
-#     except Exception as e:
-#         return jsonify({"error": str(e)}), 500
-  
