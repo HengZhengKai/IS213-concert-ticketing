@@ -5,18 +5,29 @@ A microservices-based concert ticketing system built with Docker.
 ## Quick Start
 
 1. Make sure you have Docker and Docker Compose installed
+
 2. Clone this repository
-3. Copy the `.env` file provided on eLearn to the root directory of the project
-   > **IMPORTANT**: Before starting the application, copy the `.env` file that was sent separately and place it in the root directory of the project. This file contains all the necessary environment variables for the services to function properly.
-4. Run the application with the following command:
-    docker-compose up -d --build
+
+3. For the 3rd scenario (check in QR code) to work, make sure your laptop and your 3rd party scanner (e.g. your phone) are both connected on the same network
+  - SMU Wifi Network does not work. If you running this in SMU, you can try to your phone's mobile data and use your laptop to connect to your data via HotSpot.
+  - Turn off Microsoft Defender Firewall from your private network settings
+
+4. Run the application in the root folder with the following command:
+- On Windows:
+  .\start-containers.ps1
+- On Mac:
+  ./start-containers.sh
+
 5. Run the frontend:From the root folder, run the following commands:
     cd UI/public
     python -m http.server 8080
+
 6. Go to http://localhost:8080/login.html
+
 7. Login with the following credentials:
     Email_address: breannong@gmail.com
     Password: iloveesd@2025
+
 8. You should be able to see these events on the top row in the index.html:
     Jia Le Hokkien Hits Concert II
     j-hope Tour 'HOPE ON THE STAGE' in SINGAPORE
@@ -83,12 +94,7 @@ When trying out the checkout page, use the following credentials:
 
 ## Environment Variables
 
-The system requires a `.env` file in the root directory containing all necessary environment variables. This file has been provided separately for security reasons. Make sure to:
-
-1. Copy the provided `.env` file to the root directory
-2. Do not modify the variables unless instructed
-3. Keep the file secure and do not commit it to version control
-
+The system requires a `.env` file in the root directory containing all necessary environment variables to run the application. This file is not publicly available for security reasons. Feel free to contact one of us if you require the file!
 
 ## Stopping the Application
 
@@ -96,3 +102,5 @@ docker-compose down
 
 To remove all data:
 docker-compose down -v
+
+Remember to turn back on your private network Firewall once you are done!
