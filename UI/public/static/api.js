@@ -98,32 +98,3 @@ async function fetchEvents(retries = 3, delayMs = 500) {
     }
     }
 }
-
-async function fetchAvailableTickets() {
-    let res = await fetch("http://localhost:5001/ticket");
-    return res.json();
-}
-
-async function buyTicketAPI(ticketID) {
-    let res = await fetch(`http://localhost:5001/buyticket/${ticketID}`, { method: "POST" });
-    return (await res.json()).message;
-}
-
-async function buyResaleAPI(ticketID) {
-    let res = await fetch(`http://localhost:5001/buyresaleticket/${ticketID}`, { method: "POST" });
-    return (await res.json()).message;
-}
-
-async function resellTicketAPI(ticketID, price) {
-    let res = await fetch(`http://localhost:5001/resellticket`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ticketID, price })
-    });
-    return (await res.json()).message;
-}
-
-async function checkInAPI(ticketID) {
-    let res = await fetch(`http://localhost:5001/checkin/${ticketID}`, { method: "POST" });
-    return (await res.json()).message;
-}
