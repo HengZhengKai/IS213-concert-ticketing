@@ -92,7 +92,6 @@ def get_all_seats():
 @app.route('/seats/<string:eventID>/<path:eventDateTime>')
 def get_seats_for_event(eventID, eventDateTime):
     try:
-        # Fix for URL-encoded '+' -> ' ' issue
         eventDateTime = eventDateTime.replace(' ', '+')
 
         dt = datetime.fromisoformat(eventDateTime)

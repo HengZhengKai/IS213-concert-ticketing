@@ -96,7 +96,6 @@ def publish_to_rabbitmq(exchange, routing_key, body):
         logger.info(f"Successfully published message to {exchange} with routing key {routing_key}")
     except Exception as e:
         logger.error(f"Error publishing to RabbitMQ: {e}")
-        # Don't raise the exception, just log it
 
 #app route: http://localhost:5100/buyticket
 @app.route("/buyticket", methods=['POST'])

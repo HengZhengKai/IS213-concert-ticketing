@@ -70,7 +70,7 @@ def process_sell_ticket(ticket):
         update_url = f"{ticket_URL}/{ticket['ticketID']}"
         ticket_result = invoke_http(update_url, method='PUT', json=json_body)
 
-        # Check the ticket result; if a failure, do error handling.
+        # Check the ticket result; if failure, do error handling.
         code = ticket_result.get("code")
         if code is None or code not in range(200, 300):
             if code == 400:

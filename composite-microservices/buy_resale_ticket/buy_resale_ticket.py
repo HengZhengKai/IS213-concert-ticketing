@@ -76,7 +76,6 @@ def publish_to_rabbitmq(exchange, routing_key, body):
                 delivery_mode=2,  # make message persistent
             )
         )
-        logger.info(f"Successfully published message to {exchange} with routing key {routing_key}")
     except Exception as e:
         logger.error(f"Error publishing to RabbitMQ: {e}")
         raise
@@ -133,7 +132,6 @@ def buy_resale_ticket(ticketID):
             }), 400
 
         except Exception as e:
-            # Catch any other unexpected exceptions
             exc_type, exc_obj, exc_tb = sys.exc_info()
             fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
             ex_str = f"{str(e)} at {str(exc_type)}: {fname}: line {str(exc_tb.tb_lineno)}"
@@ -148,45 +146,6 @@ def buy_resale_ticket(ticketID):
         "code": 400,
         "message": f"Invalid JSON input: {str(request.get_data())}"
     }), 400
-
-# THIS FROM PAYMENT.PY?
-# @app.route("/start-checkout", methods=['POST'])
-# def start_checkout():
-#     if request.is_json:
-#         try:
-#             data = request.get_json()
-            
-#             # Create Stripe Checkout Session
-#             checkout_session = stripe.checkout.Session.create(
-#                 payment_method_types=['card'],
-#                 line_items=[{
-#                     'price_data': {
-#                         'currency': data['currency'],
-#                         'unit_amount': data['amount'],
-#                         'product_data': {
-#                             'name': data['description'],
-#                         },
-#                     },
-#                     'quantity': 1,
-#                 }],
-#                 mode=data['mode'],
-#                 success_url=data['success_url'],
-#                 cancel_url=data['cancel_url'],
-#                 metadata=data['metadata'],
-#             )
-            
-#             return jsonify({'url': checkout_session.url}), 200
-            
-#         except Exception as e:
-#             return jsonify({
-#                 'code': 500,
-#                 'message': f'Error creating checkout session: {str(e)}'
-#             }), 500
-            
-#     return jsonify({
-#         'code': 400,
-#         'message': 'Invalid JSON input'
-#     }), 400
 
 def process_buy_resale_ticket(userID, ticketID, paymentID):
     try:

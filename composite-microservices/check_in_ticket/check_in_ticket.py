@@ -26,7 +26,6 @@ app = Flask(__name__, template_folder='templates')
 CORS(app)
 
 # Assuming Kong gateway is running and configured
-# Adjust these if your service discovery or naming is different
 kong_base_url = "http://kong:8000"
 ticket_URL = f"{kong_base_url}/ticket"
 graphql_URL = f"{kong_base_url}/graphql"
@@ -63,7 +62,6 @@ def is_ticket_checked_in(ticketID):
 
     except requests.exceptions.RequestException as e:
         print(f"Error invoking GraphQL: {e}")
-        # Consider the implications: if GraphQL is down, should we assume not checked in?
         return False # Treat connection errors etc. as not checked in for safety
     except json.JSONDecodeError:
         print("Error decoding GraphQL JSON response")

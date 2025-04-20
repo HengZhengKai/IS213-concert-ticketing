@@ -27,7 +27,6 @@ def create_exchange(hostname, port, exchange_name, exchange_type):
     channel.exchange_declare(
         exchange=exchange_name, exchange_type=exchange_type, durable=True
     )
-    # 'durable' makes the exchange survive broker restarts
 
     return channel
 
@@ -35,7 +34,6 @@ def create_exchange(hostname, port, exchange_name, exchange_type):
 def create_queue(channel, exchange_name, queue_name, routing_keys):
     print(f"Declare queue: {queue_name}")
     channel.queue_declare(queue=queue_name, durable=True)
-    # 'durable' makes the queue survive broker restarts
 
     # bind the queue to the exchange via the routing_key
     for routing_key in routing_keys:

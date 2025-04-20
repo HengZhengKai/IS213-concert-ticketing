@@ -24,8 +24,7 @@ app = Flask(__name__)
 # Add a secret key for JWT (store this securely, e.g., in .env)
 app.config['SECRET_KEY'] = os.getenv("JWT_SECRET_KEY", "your_default_super_secret_key")
 
-# Configure CORS to allow requests from specified origins
-CORS(app, resources={r"/*": {"origins": ["http://localhost", "http://localhost:8000", "http://localhost:8080"]}})
+CORS(app)
 
 # MongoDB connection details from environment variables
 username = os.getenv("MONGO_USERNAME")
@@ -86,6 +85,7 @@ def publish_to_rabbitmq(routing_key, message):
     except Exception as e:
         logger.error(f"Failed to publish to RabbitMQ: {e}")
         return False
+    
 class User(db.Document): # tell flask what are the fields in your database
     _id = db.StringField(primary_key=True) 
     name = db.StringField()

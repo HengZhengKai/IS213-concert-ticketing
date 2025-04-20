@@ -166,7 +166,7 @@ def connect_to_rabbitmq():
         )
         
         # Implement exponential backoff
-        for attempt in range(1, 4):  # 3 attempts
+        for attempt in range(1, 4):
             try:
                 # Connect to RabbitMQ
                 rabbitmq_connection = pika.BlockingConnection(parameters)

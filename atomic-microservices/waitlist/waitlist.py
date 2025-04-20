@@ -48,7 +48,7 @@ class Waitlist(db.Document): # tell flask what are the fields in your database
     meta = {
         'collection': 'Waitlist', 
         'indexes': [
-            {'fields': ['eventID', 'eventDateTime', 'userID'], 'unique': True}  # Enforce uniqueness
+            {'fields': ['eventID', 'eventDateTime', 'userID'], 'unique': True}
         ]
     }
 
