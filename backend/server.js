@@ -24,7 +24,7 @@ app.post('/login', async (req, res) => {
   try {
     console.log('Incoming request body:', req.body);
 
-    // Get user from Python service using the correct endpoint
+    // Get user from Python service using correct endpoint
     const userResponse = await axios.get(`http://localhost:5006/user/email/${email}`);
     
     if (userResponse.data.code === 404) {
